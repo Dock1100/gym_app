@@ -35,10 +35,11 @@ short summary under key "summary";
 location in the text where current exercise starts under the key "exercise_text_location", as a character number;
 what are primary affected muscle groups, as list, under key "primary_muscle_groups";
 what are secondary affected muscle groups, as list, under key "secondary_muscle_groups";
+possible muscle groups are "neck", "chest", "shoulders", "biceps", "forearms", "abs", "thighs", "calves", "back", "triceps", "glutes", "hamstrings";
 what you should pay attention to, things to focus on, as list, under key "attention_to";
 what is the start position of the body, under key "start_position", along with location in the text, as character number under key "start_position_text_location";
-what are the steps, as list, under key "steps";
-each step also includes location in the text, as a character number under key "step_text_location";
+what are the moves of the exercises, as list, under key "moves"; 
+for each move list location in the text as a character number, under key "moves_text_locations";
 what is the required equipment if there is any, as list, under key "equipment";
 is it pushing or pulling movement under key "movement_type";
 is it stretching exercise under key "is_stretching".
@@ -47,13 +48,20 @@ The text is below:
 {}"""
 
 
-def gpt3complete(speech):
+def gpt3complete(prompt):
     print('calling openai')
+    completion_tokens = 1500
+    max_prompt_length = 4096
+    prompt = prompt[0:(max_prompt_length-completion_tokens)*4]
+    prompt_2 = prompt[0:prompt.rfind('.')+1]
+    if prompt_2:
+        prompt = prompt_2
+    # len(prompt) = 17720; => 4097 tokens, however you requested 4403 tokens (4003 in your prompt; 400 for the completion)
     Platformresponse = openai.Completion.create(
         engine="text-davinci-003",
-        prompt=TEXT_TO_EXERCISES_PROMPT_TEMPLATE.format(speech),
+        prompt=prompt,
         temperature=0.7,
-        max_tokens=1500,
+        max_tokens=completion_tokens,
         top_p=1,
         frequency_penalty=0,
         presence_penalty=0,
@@ -138,13 +146,24 @@ async def parse_video_by_url(request):
         text_to_parse = text_to_exercises.openapi_response['choices'][0]['text']
         try:
             start = min(max(0, text_to_parse.find('{')), max(0, text_to_parse.find('}')))
-            end = max(text_to_parse.rfind('}'), text_to_parse.rfind(']'))
+            end = text_to_parse.rfind('}')+1
             if end <= 0:
                 end = len(text_to_parse)
-            trimmed = text_to_parse[start:end]
+            trimmed: str = text_to_parse[start:end]
+            if trimmed.startswith('{'):
+                trimmed = '[' + trimmed
+            if trimmed.endswith('}'):
+                trimmed = trimmed + ']'
             exercises_raw = demjson.decode(trimmed)
             if not isinstance(exercises_raw, list):
-                exercises_raw = [exercises_raw]
+                if 'exercises' in exercises_raw:
+                    exercises_raw = exercises_raw['exercises']
+                else:
+                    exercises_raw = [exercises_raw]
+            else:
+                if len(exercises_raw) > 0:
+                    if 'exercises' in exercises_raw[0]:
+                        exercises_raw = exercises_raw[0]['exercises']
             exercises = []
             for exercise_raw in exercises_raw:
                 ex = {}
@@ -158,7 +177,7 @@ async def parse_video_by_url(request):
                 ex['is_stretching'] = exercise_raw['is_stretching']
                 ex['start_position'] = {
                     'text': exercise_raw['start_position'],
-                    'text_location': exercise_raw['start_position_text_location'],
+                    'text_location': int(exercise_raw['start_position_text_location']),
                 }
                 equipment = exercise_raw['equipment']
                 if (not equipment
@@ -166,18 +185,18 @@ async def parse_video_by_url(request):
                     ):
                     equipment = None
                 ex['equipment'] = equipment
-                steps_raw = exercise_raw['steps']
+                steps_raw = exercise_raw['moves']
                 steps = []
                 if steps_raw:
                     if isinstance(steps_raw[0], str):
-                        if "step_text_location" not in exercise_raw:
-                            raise ValueError("step_text_location not found")
-                        if len(exercise_raw["step_text_location"]) != len(steps_raw):
-                            raise ValueError("step_text_location length mismatch")
+                        if "moves_text_locations" not in exercise_raw:
+                            raise ValueError("moves_text_locations not found")
+                        if len(exercise_raw["moves_text_locations"]) != len(steps_raw):
+                            raise ValueError("moves_text_locations length mismatch")
                         for i in range(len(steps_raw)):
                             steps.append({
                                 'text': steps_raw[i],
-                                'text_location': exercise_raw['step_text_location'][i],
+                                'text_location': int(exercise_raw['moves_text_locations'][i]),
                             })
                     else:
                         if len(steps_raw[0]) != 2:
@@ -195,6 +214,7 @@ async def parse_video_by_url(request):
 
             text_to_exercises.succeed_to_parse = True
             text_to_exercises.exercises = exercises
+            await sync_to_async(text_to_exercises.save)()
         except Exception as e:
             text_to_exercises.succeed_to_parse = False
             await sync_to_async(text_to_exercises.save)()

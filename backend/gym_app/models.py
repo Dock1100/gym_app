@@ -12,12 +12,11 @@ class Video(models.Model):
 
 
 class TextToExercisesResult(models.Model):
-    transcript_text = models.TextField(db_index=True)
-    openapi_prompt_template = models.TextField(db_index=True)
+    transcript_text = models.TextField()
+    openapi_prompt_template = models.TextField()
     openapi_response = models.JSONField()
     succeed_to_parse = models.BooleanField(null=True)
     exercises = models.JSONField(null=True)
-
 
 
 

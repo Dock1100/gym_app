@@ -1,0 +1,36 @@
+#root {
+    height: 100%;
+    width: 100%;
+}
+
+.exerciseListItem {
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+  padding: 0.7em 0;
+
+  &:hover {
+    background-color: rgba(0,0,0,0.1);
+  }
+}
+
+.muscleGroups {
+  margin-top: 0.5em;
+  font-size: 0.5em;
+}
+
+.muscleGroups span {
+  margin: 0.2em;
+  padding: 0.3em 0.5em;
+  border-radius: 0.5em;
+  color: white;
+  font-family: monospace;
+
+  &.primary {
+    background-color: #0d6efd;
+  }
+  &.secondary {
+    background-color: gray;
+  }
+  &.missing {
+    background-color: #ff8585;
+  }
+}
