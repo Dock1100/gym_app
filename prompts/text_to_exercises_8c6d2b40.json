@@ -1,0 +1,73 @@
+{
+    "prompt_hash": "8c6d2b40",
+    "cost": 1322,
+    "prompt_template": "Respond in JSON format.\nFor provided text list how many exercises there are.\nFor each exercise write:\nexercise name under key \"name\";\nshort summary under key \"summary\";\nlocation in text where current exercise starts under key \"text_location\", as character number;\nwhat are primary affected muscle groups, as list under key \"primary_muscle_groups\";\nwhat are secondary affected muscle groups, as list under key \"secondary_muscle_groups\";\nwhat you should pay attention to, thing to focus, as list under key \"attention_to\";\nwhat is the start position of the body, under key \"start_position\", along with location in text, as character number under key \"text_location\";\nwhat are the steps, as list, under key \"steps\";\n\"steps\" should also include their location in text, as character number under key \"text_location\";\nwhat is required equipment if there is any, as list under key \"equipment\";\nis it pushing or pulling movement under key \"movement_type\";\nis it stretching exercise under key \"is_stretching\".\n\nThe text is \"{}",
+    "parsed_json": [
+        {
+            "name": "Pushups",
+            "summary": "One of the most fundamental bodyweight exercises and are very popular. The movement is simple, can be done everywhere and it's very effective because you are using a lot of muscles at the same time.",
+            "text_location": 0,
+            "primary_muscle_groups": [
+                "Triceps",
+                "Chest",
+                "Shoulders"
+            ],
+            "secondary_muscle_groups": [
+                "Abdominal muscles",
+                "Hips",
+                "Legs"
+            ],
+            "attention_to": [
+                "Body position",
+                "Arm position",
+                "Range of motion",
+                "Shoulder blade movement"
+            ],
+            "start_position": "Tilt your pelvis backward and keep your butt squeezed tight",
+            "steps": [
+                {
+                    "description": "Place your wrist in a nearly vertical line under your shoulder when you do the standard pushup.",
+                    "text_location": 86
+                },
+                {
+                    "description": "For when you are doing pseudo-planch pushups which put the focus more on your shoulder.",
+                    "text_location": 155
+                },
+                {
+                    "description": "For example when you are doing swing pushups which are a triceps dominant movement.",
+                    "text_location": 192
+                },
+                {
+                    "description": "Go all the way up and all the way down and let your body straight.",
+                    "text_location": 243
+                },
+                {
+                    "description": "When you are going down your shoulder blades come together and when you are going up they go apart. You should also focus on pushing them downward instead of upward but don't forget there is still difference between the passive and an active way of this shoulder blade movement.",
+                    "text_location": 286
+                }
+            ],
+            "equipment": [],
+            "movement_type": "Pushing",
+            "is_stretching": false
+        }
+    ],
+    "platform_response": {
+        "id": "cmpl-6LtL91jHi4yjiKrkqLiQob3DftoSm",
+        "object": "text_completion",
+        "created": 1670675635,
+        "model": "text-davinci-003",
+        "choices": [
+            {
+                "text": "\n\n[\n  {\n    \"name\": \"Pushups\",\n    \"summary\": \"One of the most fundamental bodyweight exercises and are very popular. The movement is simple, can be done everywhere and it's very effective because you are using a lot of muscles at the same time.\",\n    \"text_location\": 0,\n    \"primary_muscle_groups\": [\"Triceps\", \"Chest\", \"Shoulders\"],\n    \"secondary_muscle_groups\": [\"Abdominal muscles\", \"Hips\", \"Legs\"],\n    \"attention_to\": [\"Body position\", \"Arm position\", \"Range of motion\", \"Shoulder blade movement\"],\n    \"start_position\": \"Tilt your pelvis backward and keep your butt squeezed tight\",\n    \"text_location\": 0,\n    \"steps\": [\n      {\n        \"description\": \"Place your wrist in a nearly vertical line under your shoulder when you do the standard pushup.\",\n        \"text_location\": 86\n      },\n      {\n        \"description\": \"For when you are doing pseudo-planch pushups which put the focus more on your shoulder.\",\n        \"text_location\": 155\n      },\n      {\n        \"description\": \"For example when you are doing swing pushups which are a triceps dominant movement.\",\n        \"text_location\": 192\n      },\n      {\n        \"description\": \"Go all the way up and all the way down and let your body straight.\",\n        \"text_location\": 243\n      },\n      {\n        \"description\": \"When you are going down your shoulder blades come together and when you are going up they go apart. You should also focus on pushing them downward instead of upward but don't forget there is still difference between the passive and an active way of this shoulder blade movement.\",\n        \"text_location\": 286\n      }\n    ],\n    \"equipment\": [],\n    \"movement_type\": \"Pushing\",\n    \"is_stretching\": false\n  }\n]",
+                "index": 0,
+                "logprobs": null,
+                "finish_reason": "stop"
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 882,
+            "completion_tokens": 440,
+            "total_tokens": 1322
+        }
+    }
+}

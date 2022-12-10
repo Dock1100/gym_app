@@ -1,0 +1,25 @@
+{
+    "prompt_hash": "2c98c79f",
+    "cost": 1028,
+    "prompt_template": "Respond in JSON format.\nFor provided text list how many exercises there are.\nFor each exercise write:\nexercise name under key \"name\";\nshort summary under key \"summary\";\nposition in text where current exercise starts under key \"text_position\", as  character number;\nwhat are primary affected muscle groups, as list under key \"primary_muscle_groups\";\nwhat are secondary affected muscle groups, as list under key \"secondary_muscle_groups\";\nwhat you should pay attention to, thing to focus, as list under key \"attention_to\";\nwhat are the steps, as list, under key \"steps\";\nwhat is required equipment if there is any, as list under key \"equipment\";\nis it pushing or pulling movement under key \"movement_type\";\nis it stretching exercise under key \"is_stretching\";\nThe text is \"{}",
+    "parsed_json": "<FAILED>",
+    "platform_response": {
+        "id": "cmpl-6LtG4HptMwo6vmaeWuoCrInv0Su71",
+        "object": "text_completion",
+        "created": 1670675320,
+        "model": "text-davinci-003",
+        "choices": [
+            {
+                "text": " \"\n\n[\n  {\n    \"name\": \"Pushups\",\n    \"summary\": \"Bodyweight exercise that uses a lot of muscles at the same time\",\n    \"text_position\": 0,\n    \"primary_muscle_groups\": [\"Triceps\", \"Chest\", \"Shoulders\"],\n    \"secondary_muscle_groups\": [\"Abdominal\", \"Hips\", \"Legs\"],\n    \"attention_to\": [\"Body Position\", \"Arm Position\", \"Range of Motion\", \"Shoulder Blade Movement\"],\n    \"steps\": [\"Tilt pelvis backward and keep butt squeezed tight\", \"Place wrist in a nearly vertical line\", \"Go all the way up and all the way down and let body straight\", \"Focus on pushing shoulder blades downward\"],\n    \"equipment\": [],\n    \"movement_type\": \"Pushing\",\n    \"is_stretching\": false\n  }\n]",
+                "index": 0,
+                "logprobs": null,
+                "finish_reason": "stop"
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 827,
+            "completion_tokens": 201,
+            "total_tokens": 1028
+        }
+    }
+}

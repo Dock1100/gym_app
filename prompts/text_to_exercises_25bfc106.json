@@ -1,0 +1,69 @@
+{
+    "prompt_hash": "25bfc106",
+    "cost": 1217,
+    "prompt_template": "Respond in JSON format.\nFor provided text list how many exercises there are.\nFor each exercise write:\nexercise name under key \"name\";\nshort summary under key \"summary\";\nlocation in text where current exercise starts under key \"text_location\", as character number;\nwhat are primary affected muscle groups, as list under key \"primary_muscle_groups\";\nwhat are secondary affected muscle groups, as list under key \"secondary_muscle_groups\";\nwhat you should pay attention to, thing to focus, as list under key \"attention_to\";\nwhat is the start position of the body, under key \"start_position\", along with location in text, as character number under key \"text_location\";\nwhat are the steps, as list, under key \"steps\";\neach step also includes location in text, as character number under key \"text_location\";\nwhat is required equipment if there is any, as list under key \"equipment\";\nis it pushing or pulling movement under key \"movement_type\";\nis it stretching exercise under key \"is_stretching\".\n\nThe text is \"{}",
+    "parsed_json": [
+        {
+            "name": "Pushups",
+            "summary": "One of the most fundamental bodyweight exercises",
+            "text_location": 0,
+            "primary_muscle_groups": [
+                "triceps",
+                "chest",
+                "shoulder"
+            ],
+            "secondary_muscle_groups": [
+                "abdominal muscles",
+                "hips",
+                "legs"
+            ],
+            "attention_to": [
+                "body position",
+                "arm position",
+                "range of motion",
+                "shoulder blade movement"
+            ],
+            "start_position": "Lying face down on the floor, palms flat on the floor, arms straight",
+            "steps": [
+                {
+                    "step": "Tilt pelvis backward and squeeze butt tight",
+                    "text_location": 145
+                },
+                {
+                    "step": "Place your wrist in a nearly vertical line under your shoulder when doing the standard pushup",
+                    "text_location": 276
+                },
+                {
+                    "step": "Go all the way up and all the way down and let your body straight",
+                    "text_location": 394
+                },
+                {
+                    "step": "When going down, shoulder blades come together and when going up, they go apart. Push them downward instead of upward",
+                    "text_location": 454
+                }
+            ],
+            "equipment": [],
+            "movement_type": "Pushing",
+            "is_stretching": false
+        }
+    ],
+    "platform_response": {
+        "id": "cmpl-6LtONVaRMh1zn8xIJGXBqeD2GQM9V",
+        "object": "text_completion",
+        "created": 1670675835,
+        "model": "text-davinci-003",
+        "choices": [
+            {
+                "text": "\n\n[\n  {\n    \"name\": \"Pushups\",\n    \"summary\": \"One of the most fundamental bodyweight exercises\",\n    \"text_location\": 0,\n    \"primary_muscle_groups\": [\"triceps\", \"chest\", \"shoulder\"],\n    \"secondary_muscle_groups\": [\"abdominal muscles\", \"hips\", \"legs\"],\n    \"attention_to\": [\"body position\", \"arm position\", \"range of motion\", \"shoulder blade movement\"],\n    \"start_position\": \"Lying face down on the floor, palms flat on the floor, arms straight\",\n    \"text_location\": 0,\n    \"steps\": [\n      {\n        \"step\": \"Tilt pelvis backward and squeeze butt tight\",\n        \"text_location\": 145\n      },\n      {\n        \"step\": \"Place your wrist in a nearly vertical line under your shoulder when doing the standard pushup\",\n        \"text_location\": 276\n      },\n      {\n        \"step\": \"Go all the way up and all the way down and let your body straight\",\n        \"text_location\": 394\n      },\n      {\n        \"step\": \"When going down, shoulder blades come together and when going up, they go apart. Push them downward instead of upward\",\n        \"text_location\": 454\n      }\n    ],\n    \"equipment\": [],\n    \"movement_type\": \"Pushing\",\n    \"is_stretching\": false\n  }\n]",
+                "index": 0,
+                "logprobs": null,
+                "finish_reason": "stop"
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 879,
+            "completion_tokens": 338,
+            "total_tokens": 1217
+        }
+    }
+}

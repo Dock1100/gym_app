@@ -1,0 +1,72 @@
+{
+    "prompt_hash": "2ac23e59",
+    "cost": 1186,
+    "prompt_template": "Respond in JSON format.\nFor provided text list how many exercises there are.\nFor each exercise write:\nexercise name under key \"name\";\nshort summary under key \"summary\";\nposition in text where current exercise starts under key \"text_position\", as  character number;\nwhat are primary affected muscle groups, as list under key \"primary_muscle_groups\";\nwhat are secondary affected muscle groups, as list under key \"secondary_muscle_groups\";\nwhat you should pay attention to, thing to focus, as list under key \"attention_to\";\nwhat are the steps, as list, under key \"steps\";\n\"steps\" should also include their position in text, as character number under key \"text_position\";\nwhat is required equipment if there is any, as list under key \"equipment\";\nis it pushing or pulling movement under key \"movement_type\";\nis it stretching exercise under key \"is_stretching\".\n\nThe text is \"{}",
+    "parsed_json": [
+        {
+            "name": "Pushups",
+            "summary": "Exercise that uses multiple muscle groups to do a pushing motion",
+            "text_position": 0,
+            "primary_muscle_groups": [
+                "triceps",
+                "chest",
+                "shoulders"
+            ],
+            "secondary_muscle_groups": [
+                "abdominals",
+                "hips",
+                "legs"
+            ],
+            "attention_to": [
+                "body position",
+                "arm position",
+                "range of motion",
+                "shoulder blade movement"
+            ],
+            "steps": [
+                {
+                    "text_position": 95,
+                    "description": "Tilt your pelvis backward and keep your butt squeezed tight"
+                },
+                {
+                    "text_position": 147,
+                    "description": "Place your wrist in a nearly vertical line under your shoulder for standard pushups"
+                },
+                {
+                    "text_position": 191,
+                    "description": "Go all the way up and all the way down and let your body straight"
+                },
+                {
+                    "text_position": 248,
+                    "description": "When you are going down your shoulder blades come together and when you are going up they go apart"
+                },
+                {
+                    "text_position": 311,
+                    "description": "Focus on pushing them downward instead of upward"
+                }
+            ],
+            "equipment": [],
+            "movement_type": "pushing",
+            "is_stretching": false
+        }
+    ],
+    "platform_response": {
+        "id": "cmpl-6LtIYZ8TmZ50Noga9LJpj4octrBU5",
+        "object": "text_completion",
+        "created": 1670675474,
+        "model": "text-davinci-003",
+        "choices": [
+            {
+                "text": "\n\n[\n  {\n    \"name\": \"Pushups\",\n    \"summary\": \"Exercise that uses multiple muscle groups to do a pushing motion\",\n    \"text_position\": 0,\n    \"primary_muscle_groups\": [\"triceps\", \"chest\", \"shoulders\"],\n    \"secondary_muscle_groups\": [\"abdominals\", \"hips\", \"legs\"],\n    \"attention_to\": [\"body position\", \"arm position\", \"range of motion\", \"shoulder blade movement\"],\n    \"steps\": [\n      {\n        \"text_position\": 95,\n        \"description\": \"Tilt your pelvis backward and keep your butt squeezed tight\"\n      },\n      {\n        \"text_position\": 147,\n        \"description\": \"Place your wrist in a nearly vertical line under your shoulder for standard pushups\"\n      },\n      {\n        \"text_position\": 191,\n        \"description\": \"Go all the way up and all the way down and let your body straight\"\n      },\n      {\n        \"text_position\": 248,\n        \"description\": \"When you are going down your shoulder blades come together and when you are going up they go apart\"\n      },\n      {\n        \"text_position\": 311,\n        \"description\": \"Focus on pushing them downward instead of upward\"\n      }\n    ],\n    \"equipment\": [],\n    \"movement_type\": \"pushing\",\n    \"is_stretching\": false\n  }\n]",
+                "index": 0,
+                "logprobs": null,
+                "finish_reason": "stop"
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 850,
+            "completion_tokens": 336,
+            "total_tokens": 1186
+        }
+    }
+}

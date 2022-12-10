@@ -1,0 +1,86 @@
+{
+    "prompt_hash": "0d05f0de",
+    "cost": 1553,
+    "prompt_template": "Respond in JSON format.\nFor provided text list how many exercises there are.\nFor each exercise write:\nexercise name under key \"name\";\nshort summary under key \"summary\";\nlocation in text where current exercise starts under key \"text_location\", as character number;\nwhat are primary affected muscle groups, as list under key \"primary_muscle_groups\";\nwhat are secondary affected muscle groups, as list under key \"secondary_muscle_groups\";\nwhat you should pay attention to, thing to focus, as list under key \"attention_to\";\nwhat is the start position of the body, under key \"start_position\", along with location in text, as character number under key \"text_location\";\nwhat are the steps, as list, under key \"steps\";\neach step is one sentence long; \neach step also includes location in text, as character number under key \"text_location\";\nwhat is required equipment if there is any, as list under key \"equipment\";\nis it pushing or pulling movement under key \"movement_type\";\nis it stretching exercise under key \"is_stretching\".\n\nThe text is \"{}",
+    "parsed_json": {
+        "exercises": [
+            {
+                "name": "Pushups",
+                "summary": "A bodyweight excercise that uses multiple muscle groups and is effective when done with proper form.",
+                "text_location": 0,
+                "primary_muscle_groups": [
+                    "triceps",
+                    "chest",
+                    "shoulders"
+                ],
+                "secondary_muscle_groups": [
+                    "abdominals",
+                    "hips",
+                    "legs"
+                ],
+                "attention_to": [
+                    "body position",
+                    "arm position",
+                    "range of motion",
+                    "shoulder blade movement"
+                ],
+                "start_position": {
+                    "position": "tilt your pelvis backwards and keep your butt squeezed tight.",
+                    "text_location": 166
+                },
+                "steps": [
+                    {
+                        "step": "A pushup is not only a triceps chest and shoulder movement. Most people neglect their tension in the abdominal muscles, the hips and the legs. Often they form an arch back and have a leg and body tension.",
+                        "text_location": 73
+                    },
+                    {
+                        "step": "The arm position doesn't really matter in terms of the perfect execution. A perfect pushup can be done with a white or a narrow grip but it's important to place your wrist in a nearly vertical line under your shoulder when you do the standard pushup.",
+                        "text_location": 136
+                    },
+                    {
+                        "step": "To avoid this tilt your pelvis backward and keep your butt squeezed tight. The movement gets a lot harder with this but it's also more effective.",
+                        "text_location": 166
+                    },
+                    {
+                        "step": "There are still exceptions for that rule. For example when you are doing pseudo-planch pushups which put the focus more on your shoulder. For when you are doing swing pushups which are a triceps dominant movement.",
+                        "text_location": 207
+                    },
+                    {
+                        "step": "Go all the way up and all the way down and let your body straight. That decrease the range of motion by bringing your head forward or your hips down.",
+                        "text_location": 260
+                    },
+                    {
+                        "step": "When you are going down your shoulder blades come together and when you are going up they go apart. You should also focus on pushing them downward instead of upward but don't forget there is still difference between the passive and an active way of this shoulder blade movement.",
+                        "text_location": 310
+                    },
+                    {
+                        "step": "If you consider all those points and try it on your own you will notice that it is much harder to do. Maybe your amount of maximum repetitions will drop but that doesn't matter. Always focus on quality over quantity and you will be rewarded with progress and the healthy body.",
+                        "text_location": 394
+                    }
+                ],
+                "equipment": [],
+                "movement_type": "pushing",
+                "is_stretching": false
+            }
+        ]
+    },
+    "platform_response": {
+        "id": "cmpl-6LtNgpvmk4Rje6K7PqZFvGb5S3aMn",
+        "object": "text_completion",
+        "created": 1670675792,
+        "model": "text-davinci-003",
+        "choices": [
+            {
+                "text": "\n\n{\n  \"exercises\": [\n    {\n      \"name\": \"Pushups\",\n      \"summary\": \"A bodyweight excercise that uses multiple muscle groups and is effective when done with proper form.\",\n      \"text_location\": 0,\n      \"primary_muscle_groups\": [\"triceps\", \"chest\", \"shoulders\"],\n      \"secondary_muscle_groups\": [\"abdominals\", \"hips\", \"legs\"],\n      \"attention_to\": [\"body position\", \"arm position\", \"range of motion\", \"shoulder blade movement\"],\n      \"start_position\": {\n        \"position\": \"tilt your pelvis backwards and keep your butt squeezed tight.\",\n        \"text_location\": 166\n      },\n      \"steps\": [\n        {\n          \"step\": \"A pushup is not only a triceps chest and shoulder movement. Most people neglect their tension in the abdominal muscles, the hips and the legs. Often they form an arch back and have a leg and body tension.\",\n          \"text_location\": 73\n        },\n        {\n          \"step\": \"The arm position doesn't really matter in terms of the perfect execution. A perfect pushup can be done with a white or a narrow grip but it's important to place your wrist in a nearly vertical line under your shoulder when you do the standard pushup.\",\n          \"text_location\": 136\n        },\n        {\n          \"step\": \"To avoid this tilt your pelvis backward and keep your butt squeezed tight. The movement gets a lot harder with this but it's also more effective.\",\n          \"text_location\": 166\n        },\n        {\n          \"step\": \"There are still exceptions for that rule. For example when you are doing pseudo-planch pushups which put the focus more on your shoulder. For when you are doing swing pushups which are a triceps dominant movement.\",\n          \"text_location\": 207\n        },\n        {\n          \"step\": \"Go all the way up and all the way down and let your body straight. That decrease the range of motion by bringing your head forward or your hips down.\",\n          \"text_location\": 260\n        },\n        {\n          \"step\": \"When you are going down your shoulder blades come together and when you are going up they go apart. You should also focus on pushing them downward instead of upward but don't forget there is still difference between the passive and an active way of this shoulder blade movement.\",\n          \"text_location\": 310\n        },\n        {\n          \"step\": \"If you consider all those points and try it on your own you will notice that it is much harder to do. Maybe your amount of maximum repetitions will drop but that doesn't matter. Always focus on quality over quantity and you will be rewarded with progress and the healthy body.\",\n          \"text_location\": 394\n        }\n      ],\n      \"equipment\": [],\n      \"movement_type\": \"pushing\",\n      \"is_stretching\": false\n    }\n  ]\n}",
+                "index": 0,
+                "logprobs": null,
+                "finish_reason": "stop"
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 888,
+            "completion_tokens": 665,
+            "total_tokens": 1553
+        }
+    }
+}

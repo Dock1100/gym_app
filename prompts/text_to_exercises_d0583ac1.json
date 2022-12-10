@@ -1,0 +1,72 @@
+{
+    "prompt_hash": "d0583ac1",
+    "cost": 1249,
+    "prompt_template": "Respond in JSON format.\nFor provided text list how many exercises there are.\nFor each exercise write:\nexercise name under key \"name\";\nshort summary under key \"summary\";\nlocation in text where current exercise starts under key \"exercise_text_location\", as character number;\nwhat are primary affected muscle groups, as list under key \"primary_muscle_groups\";\nwhat are secondary affected muscle groups, as list under key \"secondary_muscle_groups\";\nwhat you should pay attention to, thing to focus, as list under key \"attention_to\";\nwhat is the start position of the body, under key \"start_position\", along with location in text, as character number under key \"start_position_text_location\";\nwhat are the steps, as list, under key \"steps\";\neach step also includes location in text, as character number under key \"step_text_location\";\nwhat is required equipment if there is any, as list under key \"equipment\";\nis it pushing or pulling movement under key \"movement_type\";\nis it stretching exercise under key \"is_stretching\".\n\nThe text is \"{}",
+    "parsed_json": {
+        "exercises": [
+            {
+                "name": "Pushups",
+                "summary": "Popular bodyweight exercise that uses a lot of muscles at the same time.",
+                "exercise_text_location": 0,
+                "primary_muscle_groups": [
+                    "triceps",
+                    "chest",
+                    "shoulders"
+                ],
+                "secondary_muscle_groups": [
+                    "abdominal muscles",
+                    "hips",
+                    "legs"
+                ],
+                "attention_to": [
+                    "body position",
+                    "arm position",
+                    "range of motion",
+                    "shoulder blade movement"
+                ],
+                "start_position": "Tilt your pelvis backward and keep your butt squeezed tight.",
+                "start_position_text_location": 42,
+                "steps": [
+                    {
+                        "step": "Place your wrist in a nearly vertical line under your shoulder when you do the standard pushup.",
+                        "step_text_location": 94
+                    },
+                    {
+                        "step": "Go all the way up and all the way down and let your body straight.",
+                        "step_text_location": 181
+                    },
+                    {
+                        "step": "When you are going down your shoulder blades come together and when you are going up they go apart.",
+                        "step_text_location": 220
+                    },
+                    {
+                        "step": "Focus on pushing them downward instead of upward.",
+                        "step_text_location": 307
+                    }
+                ],
+                "equipment": [],
+                "movement_type": "pushing",
+                "is_stretching": false
+            }
+        ]
+    },
+    "platform_response": {
+        "id": "cmpl-6LtPFzwIc69xnkZNAaVfqiEx0ODi4",
+        "object": "text_completion",
+        "created": 1670675889,
+        "model": "text-davinci-003",
+        "choices": [
+            {
+                "text": "\n\n{\n  \"exercises\": [\n    {\n      \"name\": \"Pushups\",\n      \"summary\": \"Popular bodyweight exercise that uses a lot of muscles at the same time.\",\n      \"exercise_text_location\": 0,\n      \"primary_muscle_groups\": [\"triceps\", \"chest\", \"shoulders\"],\n      \"secondary_muscle_groups\": [\"abdominal muscles\", \"hips\", \"legs\"],\n      \"attention_to\": [\"body position\", \"arm position\", \"range of motion\", \"shoulder blade movement\"],\n      \"start_position\": \"Tilt your pelvis backward and keep your butt squeezed tight.\",\n      \"start_position_text_location\": 42,\n      \"steps\": [\n        {\n          \"step\": \"Place your wrist in a nearly vertical line under your shoulder when you do the standard pushup.\",\n          \"step_text_location\": 94\n        },\n        {\n          \"step\": \"Go all the way up and all the way down and let your body straight.\",\n          \"step_text_location\": 181\n        },\n        {\n          \"step\": \"When you are going down your shoulder blades come together and when you are going up they go apart.\",\n          \"step_text_location\": 220\n        },\n        {\n          \"step\": \"Focus on pushing them downward instead of upward.\",\n          \"step_text_location\": 307\n        }\n      ],\n      \"equipment\": [],\n      \"movement_type\": \"pushing\",\n      \"is_stretching\": false\n    }\n  ]\n}",
+                "index": 0,
+                "logprobs": null,
+                "finish_reason": "stop"
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 888,
+            "completion_tokens": 361,
+            "total_tokens": 1249
+        }
+    }
+}

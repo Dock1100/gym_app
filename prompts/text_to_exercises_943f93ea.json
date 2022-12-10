@@ -1,0 +1,60 @@
+{
+    "prompt_hash": "943f93ea",
+    "cost": 1180,
+    "prompt_template": "Respond in JSON format.\nFor provided text list how many exercises there are.\nFor each exercise write:\nexercise name under key \"name\";\nshort summary under key \"summary\";\nlocation in text where current exercise starts under key \"text_location\", as character number;\nwhat are primary affected muscle groups, as list under key \"primary_muscle_groups\";\nwhat are secondary affected muscle groups, as list under key \"secondary_muscle_groups\";\nwhat you should pay attention to, thing to focus, as list under key \"attention_to\";\nwhat is the start position of the body, under key \"start_position\", along with location in text, as character number under key \"text_location\";\nwhat are the steps, as list, once sentence each, under key \"steps\";\n\"steps\" should also include their location in text, as character number under key \"text_location\";\nwhat is required equipment if there is any, as list under key \"equipment\";\nis it pushing or pulling movement under key \"movement_type\";\nis it stretching exercise under key \"is_stretching\".\n\nThe text is \"{}",
+    "parsed_json": {
+        "exercises": [
+            {
+                "name": "Pushups",
+                "summary": "A fundamental bodyweight exercise that can be done everywhere and is very effective.",
+                "text_location": 51,
+                "primary_muscle_groups": [
+                    "triceps",
+                    "chest",
+                    "shoulders"
+                ],
+                "secondary_muscle_groups": [
+                    "abdominals",
+                    "hips",
+                    "legs"
+                ],
+                "attention_to": [
+                    "body position",
+                    "arm position",
+                    "range of motion",
+                    "shoulder blade movement"
+                ],
+                "start_position": "Lie face down on the floor with hands slightly wider than shoulders.",
+                "steps": [
+                    "Tilt your pelvis backward and keep your butt squeezed tight.",
+                    "Place your wrist in a nearly vertical line under your shoulder for standard pushups.",
+                    "Go all the way up and all the way down and let your body straight.",
+                    "When going down, your shoulder blades come together and when going up, they go apart.",
+                    "Focus on pushing them downward instead of upward and an active shoulder blade movement."
+                ],
+                "equipment": [],
+                "movement_type": "pushing",
+                "is_stretching": false
+            }
+        ]
+    },
+    "platform_response": {
+        "id": "cmpl-6LtMAY9Tbk9ZnjgkQUceFaBPDi2h7",
+        "object": "text_completion",
+        "created": 1670675698,
+        "model": "text-davinci-003",
+        "choices": [
+            {
+                "text": "\n\n{\n  \"exercises\": [\n    {\n      \"name\": \"Pushups\",\n      \"summary\": \"A fundamental bodyweight exercise that can be done everywhere and is very effective.\",\n      \"text_location\": 0, \n      \"primary_muscle_groups\": [\"triceps\", \"chest\", \"shoulders\"],\n      \"secondary_muscle_groups\": [\"abdominals\", \"hips\", \"legs\"],\n      \"attention_to\": [\"body position\", \"arm position\", \"range of motion\", \"shoulder blade movement\"],\n      \"start_position\": \"Lie face down on the floor with hands slightly wider than shoulders.\",\n      \"text_location\": 51,\n      \"steps\": [\n        \"Tilt your pelvis backward and keep your butt squeezed tight.\",\n        \"Place your wrist in a nearly vertical line under your shoulder for standard pushups.\",\n        \"Go all the way up and all the way down and let your body straight.\",\n        \"When going down, your shoulder blades come together and when going up, they go apart.\",\n        \"Focus on pushing them downward instead of upward and an active shoulder blade movement.\"\n      ],\n      \"equipment\": [],\n      \"movement_type\": \"pushing\",\n      \"is_stretching\": false\n    }\n  ]\n}",
+                "index": 0,
+                "logprobs": null,
+                "finish_reason": "stop"
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 886,
+            "completion_tokens": 294,
+            "total_tokens": 1180
+        }
+    }
+}
