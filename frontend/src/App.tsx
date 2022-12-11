@@ -10,11 +10,107 @@ import {Exercise} from "./types/exercise";
 import {AddExercisesModal} from "./blocks/add_exercises_modal";
 import {ViewExercisesModal} from "./blocks/view_exercise_modal";
 
-const MUSCLE_GROUPS = ["neck", "chest", "shoulders", "biceps", "forearms", "abs", "thighs", "calves", "back", "triceps", "glutes", "hamstrings"]
+
+// https://github.com/microsoft/TypeScript/issues/28046#issuecomment-431871542
+function stringLiterals<T extends string>(...args: T[]): T[] {
+  return args;
+}
+
+type ElementType<T extends ReadonlyArray<unknown>> = T extends ReadonlyArray<infer ElementType> ? ElementType : never;
+
+const MUSCLE_GROUPS = stringLiterals("neck", "chest", "shoulders", "biceps", "forearms", "abs", "thighs", "calves", "back", "triceps", "glutes", "hamstrings");
+type TMuscleGroup = ElementType<typeof MUSCLE_GROUPS>;
+
+const WEEK_DAY_NAMES = stringLiterals('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday');
+type TWeekDayName = ElementType<typeof WEEK_DAY_NAMES>;
+
+type TrainingDays = {
+  [key in TWeekDayName]: {
+    exercises: string[]
+  }
+}
 
 type StoredStateType = {
   exercises: Exercise[],
   activeScreen: string,
+  numberOfTrainingsPerWeek: number | null,
+  trainingDays: TrainingDays
+  suggestedTrainingDays: TrainingDays
+}
+
+const DEFAULT_STORED_STATE: StoredStateType = {
+  exercises: [],
+  activeScreen: 'schedule',
+  numberOfTrainingsPerWeek: null,
+  trainingDays: {} as TrainingDays,
+  suggestedTrainingDays: {} as TrainingDays
+}
+
+function getMissingWeekDaysOrderedByMidDistance(trainingDays: TrainingDays, targetDaysNum: number): TWeekDayName[] {
+  // [0 0 0 0 0 0 0]
+  // [1 0 0 0 0 0 0]   [0 0*5 1*4.1 2*3.1 3*2.1 4*1.1 5*0]
+  // [1 0 0 0 1 0 0]
+  // [1 0 1 0 1 0 0]
+  // [1 0 1 0 1 1 0]
+  // [1 1 1 0 1 1 0]
+  // [1 1 1 0 1 1 0]
+  let orderedDays = []
+  if (Object.keys(trainingDays).length == 0) {
+    orderedDays.push(WEEK_DAY_NAMES[0])
+  }
+  while (orderedDays.length + Object.keys(trainingDays).length < WEEK_DAY_NAMES.length) {
+    let fillMatrix = [0, 0, 0, 0, 0, 0, 0]
+    for (let i = 0; i < WEEK_DAY_NAMES.length; i++) {
+      let d = WEEK_DAY_NAMES[i]
+      if (!(d in trainingDays) && (orderedDays.indexOf(d) == -1)) {
+      } else {
+        fillMatrix[i] = 1
+      }
+    }
+    let distances = [0, 0, 0, 0, 0, 0, 0]
+    for (let di = 0; di < 7; di++) {
+      if (fillMatrix[di] == 1) {
+        distances[di] = -1
+        continue
+      }
+      let right = 0
+      for (let i = 1; i < 7; i++) {
+        if (fillMatrix[(di + i) % 7] == 1) {
+          right = i
+          break
+        }
+      }
+      let left = 0
+      for (let i = 1; i < 7; i++) {
+        if (fillMatrix[(7 + di - i) % 7] == 1) {
+          left = i
+          break
+        }
+      }
+      if (targetDaysNum < 4) {
+        distances[di] = (left) * (right + 0.1)
+      } else {
+        distances[di] = (left + 0.1) * (right)
+      }
+    }
+    let day = WEEK_DAY_NAMES[distances.indexOf(Math.max(...distances))]
+    orderedDays.push(day)
+  }
+  // @ts-ignore
+  return orderedDays
+}
+
+function suggestMissingDays(trainingDays: TrainingDays, targetDaysNum: number): TrainingDays {
+  let daysNumToSuggest = targetDaysNum - Object.keys(trainingDays).length
+  if (daysNumToSuggest <= 0) {
+    return {} as TrainingDays
+  }
+  let suggestedTrainingDays = {} as TrainingDays
+  let missingDays = getMissingWeekDaysOrderedByMidDistance(trainingDays, targetDaysNum)
+  for (let i = 0; i < daysNumToSuggest; i++) {
+    suggestedTrainingDays[missingDays[i]] = {exercises: []}
+  }
+  return suggestedTrainingDays
 }
 
 function App() {
@@ -23,6 +119,13 @@ function App() {
       try {
         if (savedState) {
           let parsedState = JSON.parse(savedState) as StoredStateType
+          // MIGRATIONS!!!!!)))))))
+          for (let key of Object.keys(DEFAULT_STORED_STATE)) {
+            if (!(key in parsedState)) {
+              // @ts-ignore
+              parsedState[key] = DEFAULT_STORED_STATE[key]
+            }
+          }
           console.log('loaded storedState', parsedState)
           return parsedState
         }
@@ -30,17 +133,14 @@ function App() {
         console.log('failed to load storedState', e)
       }
 
-      return {
-        exercises: [],
-        activeScreen: 'schedule'
-      }
+      return DEFAULT_STORED_STATE
     }
   )
 
   localStorage.setItem('storedState', JSON.stringify(storedState))
 
 
-  const {exercises, activeScreen} = storedState
+  const {exercises, activeScreen, numberOfTrainingsPerWeek} = storedState
   const setExercises: Dispatch<SetStateAction<Exercise[]>> = (ep) => {
     setStoredState((p) => {
       if (!!ep && 'function' === typeof ep) {
@@ -52,13 +152,45 @@ function App() {
       return {...p, exercises: ep}
     })
   }
-
-
+  const setNumberOfTrainingsPerWeek = (n: number | null) => {
+    console.log('setNumberOfTrainingsPerWeek', n)
+    setStoredState((p) => {
+      let {trainingDays, suggestedTrainingDays} = p
+      if (n == null) {
+        console.log('reset')
+        trainingDays = {} as TrainingDays
+        suggestedTrainingDays = {} as TrainingDays
+      } else if (n != p.numberOfTrainingsPerWeek) {
+        console.log('recalc')
+        if (Object.keys(trainingDays).length > n) {
+          trainingDays = Object.fromEntries(Object.entries(trainingDays).slice(0, n)) as TrainingDays
+        }
+        suggestedTrainingDays = suggestMissingDays(trainingDays, n)
+      }
+      return {...p, numberOfTrainingsPerWeek: n, trainingDays, suggestedTrainingDays}
+    })
+  }
+  const onTrainingDayMarkerChange = (day: TWeekDayName, checked: boolean) => {
+    setStoredState((p) => {
+      let {trainingDays, suggestedTrainingDays} = p
+      if (day in suggestedTrainingDays) {
+        trainingDays[day] = {...suggestedTrainingDays[day]}
+        delete suggestedTrainingDays[day]
+      } else {
+        if (checked) {
+          trainingDays[day] = {exercises: []}
+        } else {
+          delete trainingDays[day]
+        }
+      }
+      suggestedTrainingDays = suggestMissingDays(trainingDays, p.numberOfTrainingsPerWeek || 0)
+      return {...p, trainingDays, suggestedTrainingDays}
+    })
+  }
   const setActiveScreen = (activeScreen: string) => {
     setStoredState((p) => ({...p, activeScreen}))
   }
-// const [activeScreen, setActiveScreen] = useState('schedule');
-// const [exercises, setExercises] = useState<Exercise[]>([]);
+
 
   const [addExercisesModalShow, setAddExercisesModalShow] = useState(false);
   const [viewExerciseModalObj, setViewExerciseModalObj] = useState<Exercise | null>(null)
@@ -139,6 +271,51 @@ function App() {
                 {exercise.secondary_muscle_groups.map((m, i) => <span className="secondary" key={m}>{m}</span>)}
               </div>
             </Container>)}
+          </>}
+          {activeScreen == 'schedule' && <>
+            <Container className="text-center">
+              <Form onSubmit={(e) => {
+                e.preventDefault();
+              }}>
+                <Form.Group>
+                  <Form.Label>How many trainings per week?</Form.Label>
+                  <Form.Select value={numberOfTrainingsPerWeek == null ? "null" : numberOfTrainingsPerWeek}
+                               onChange={(e) => {
+                                 let value: number | null = parseInt(e.target.value)
+                                 if (isNaN(value)) {
+                                   value = null
+                                 }
+                                 setNumberOfTrainingsPerWeek(value)
+                               }}
+                  >
+                    <option value="null">Pick from list</option>
+                    <option value="1">One</option>
+                    <option value="2">Two</option>
+                    <option value="3">Three (recommended for start)</option>
+                    <option value="4">Four</option>
+                    <option value="5">Five</option>
+                    <option value="6">Six</option>
+                    <option value="7">Seven</option>
+                  </Form.Select>
+                </Form.Group>
+                <Container>
+                  <Row>
+                    {WEEK_DAY_NAMES.map((d, i) =>
+                      <Form.Label key={i} column={true}
+                                  className={numberOfTrainingsPerWeek == null ? 'text-muted' : ''}
+                      >
+                        {d[0]}
+                        <Form.Check type="checkbox" disabled={numberOfTrainingsPerWeek == null}
+                                    style={{opacity: d in storedState.suggestedTrainingDays ? 0.5 : 1}}
+                                    checked={d in storedState.trainingDays || d in storedState.suggestedTrainingDays}
+                                    onChange={(e) => onTrainingDayMarkerChange(d, e.target.checked)}
+                        />
+                      </Form.Label>
+                    )}
+                  </Row>
+                </Container>
+              </Form>
+            </Container>
           </>}
           {activeScreen == 'trainings' && <>
             <Container className="text-center">
