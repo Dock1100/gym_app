@@ -9,6 +9,7 @@ import {EditableExerciseBlock} from "./blocks/edit_exercise";
 import {Exercise} from "./types/exercise";
 import {AddExercisesModal} from "./blocks/add_exercises_modal";
 import {ViewExercisesModal} from "./blocks/view_exercise_modal";
+import {tab} from "@testing-library/user-event/dist/tab";
 
 
 // https://github.com/microsoft/TypeScript/issues/28046#issuecomment-431871542
@@ -26,7 +27,7 @@ type TWeekDayName = ElementType<typeof WEEK_DAY_NAMES>;
 
 type TrainingDays = {
   [key in TWeekDayName]: {
-    exercises: string[]
+    exerciseNames: string[]
   }
 }
 
@@ -35,7 +36,8 @@ type StoredStateType = {
   activeScreen: string,
   numberOfTrainingsPerWeek: number | null,
   trainingDays: TrainingDays
-  suggestedTrainingDays: TrainingDays
+  suggestedTrainingDayNames: TWeekDayName[]
+  suggestedTrainingExercises: TrainingDays
 }
 
 const DEFAULT_STORED_STATE: StoredStateType = {
@@ -43,10 +45,11 @@ const DEFAULT_STORED_STATE: StoredStateType = {
   activeScreen: 'schedule',
   numberOfTrainingsPerWeek: null,
   trainingDays: {} as TrainingDays,
-  suggestedTrainingDays: {} as TrainingDays
+  suggestedTrainingDayNames: [],
+  suggestedTrainingExercises: {} as TrainingDays,
 }
 
-function getMissingWeekDaysOrderedByMidDistance(trainingDays: TrainingDays, targetDaysNum: number): TWeekDayName[] {
+function getMissingWeekDaysOrderedByMidDistance(trainingDayNames: TWeekDayName[], targetDaysNum: number): TWeekDayName[] {
   // [0 0 0 0 0 0 0]
   // [1 0 0 0 0 0 0]   [0 0*5 1*4.1 2*3.1 3*2.1 4*1.1 5*0]
   // [1 0 0 0 1 0 0]
@@ -55,14 +58,14 @@ function getMissingWeekDaysOrderedByMidDistance(trainingDays: TrainingDays, targ
   // [1 1 1 0 1 1 0]
   // [1 1 1 0 1 1 0]
   let orderedDays = []
-  if (Object.keys(trainingDays).length == 0) {
+  if (trainingDayNames.length == 0) {
     orderedDays.push(WEEK_DAY_NAMES[0])
   }
-  while (orderedDays.length + Object.keys(trainingDays).length < WEEK_DAY_NAMES.length) {
+  while (orderedDays.length + trainingDayNames.length < WEEK_DAY_NAMES.length) {
     let fillMatrix = [0, 0, 0, 0, 0, 0, 0]
     for (let i = 0; i < WEEK_DAY_NAMES.length; i++) {
       let d = WEEK_DAY_NAMES[i]
-      if (!(d in trainingDays) && (orderedDays.indexOf(d) == -1)) {
+      if ((trainingDayNames.indexOf(d) == -1) && (orderedDays.indexOf(d) == -1)) {
       } else {
         fillMatrix[i] = 1
       }
@@ -100,17 +103,83 @@ function getMissingWeekDaysOrderedByMidDistance(trainingDays: TrainingDays, targ
   return orderedDays
 }
 
-function suggestMissingDays(trainingDays: TrainingDays, targetDaysNum: number): TrainingDays {
-  let daysNumToSuggest = targetDaysNum - Object.keys(trainingDays).length
+function suggestMissingDayNames(trainingDayNames: TWeekDayName[], targetDaysNum: number): TWeekDayName[] {
+  let daysNumToSuggest = targetDaysNum - trainingDayNames.length
   if (daysNumToSuggest <= 0) {
-    return {} as TrainingDays
+    return []
   }
-  let suggestedTrainingDays = {} as TrainingDays
-  let missingDays = getMissingWeekDaysOrderedByMidDistance(trainingDays, targetDaysNum)
+  let suggestedTrainingDayNames = [] as TWeekDayName[]
+  let missingDays = getMissingWeekDaysOrderedByMidDistance(trainingDayNames, targetDaysNum)
   for (let i = 0; i < daysNumToSuggest; i++) {
-    suggestedTrainingDays[missingDays[i]] = {exercises: []}
+    suggestedTrainingDayNames.push(missingDays[i])
   }
-  return suggestedTrainingDays
+  return suggestedTrainingDayNames
+}
+
+function deleteExcessDays(trainingDays: TrainingDays, targetDaysNum: number, exceptDays?: TWeekDayName[]): TrainingDays {
+  let newTrainingDays = {} as TrainingDays
+  if (exceptDays == undefined) {
+    exceptDays = []
+  }
+  for (let d of exceptDays) {
+    if (d in trainingDays) {
+      newTrainingDays[d] = trainingDays[d]
+    }
+  }
+  if (Object.keys(newTrainingDays).length < targetDaysNum) {
+    // todo: fix
+    let order = getMissingWeekDaysOrderedByMidDistance(Object.keys(newTrainingDays) as TWeekDayName[], targetDaysNum)
+    for (let i = 0; i < order.length; i++) {
+      let d = order[i]
+      if (d in trainingDays) {
+        newTrainingDays[d] = trainingDays[d]
+      }
+      if (Object.keys(newTrainingDays).length == targetDaysNum) {
+        break
+      }
+    }
+  }
+  return newTrainingDays
+}
+
+function suggestMissingExercises(trainingDays: TrainingDays, suggestedTrainingDayNames: TWeekDayName[], exercises: Exercise[]): TrainingDays {
+  // todo: implement
+  let suggestedTrainingExercises = {} as TrainingDays
+  let notUsedExerciseNames = []
+  for (let e of exercises) {
+    let is_missing = true
+    for (let d of Object.keys(trainingDays) as TWeekDayName[]) {
+      if (trainingDays[d].exerciseNames.indexOf(e.name) != -1) {
+        is_missing = false
+        break
+      }
+    }
+    if (is_missing) {
+      notUsedExerciseNames.push(e.name)
+    }
+  }
+  for (let d of Object.keys(trainingDays) as TWeekDayName[]) {
+    if (trainingDays[d].exerciseNames.length == 0 && notUsedExerciseNames.length > 0) {
+      suggestedTrainingExercises[d] = {
+        exerciseNames: [
+          //@ts-ignore
+          notUsedExerciseNames.pop()
+        ]
+      }
+    }
+  }
+
+  for (let d of suggestedTrainingDayNames) {
+    if (notUsedExerciseNames.length > 0) {
+      suggestedTrainingExercises[d] = {
+        exerciseNames: [
+          //@ts-ignore
+          notUsedExerciseNames.pop()
+        ]
+      }
+    }
+  }
+  return suggestedTrainingExercises
 }
 
 function App() {
@@ -141,6 +210,10 @@ function App() {
 
 
   const {exercises, activeScreen, numberOfTrainingsPerWeek} = storedState
+  const exercisesByNames: { [key: string]: Exercise } = {}
+  for (let e of exercises) {
+    exercisesByNames[e.name] = e
+  }
   const setExercises: Dispatch<SetStateAction<Exercise[]>> = (ep) => {
     setStoredState((p) => {
       if (!!ep && 'function' === typeof ep) {
@@ -153,38 +226,38 @@ function App() {
     })
   }
   const setNumberOfTrainingsPerWeek = (n: number | null) => {
-    console.log('setNumberOfTrainingsPerWeek', n)
     setStoredState((p) => {
-      let {trainingDays, suggestedTrainingDays} = p
+      let {trainingDays, suggestedTrainingDayNames, suggestedTrainingExercises} = p
       if (n == null) {
-        console.log('reset')
         trainingDays = {} as TrainingDays
-        suggestedTrainingDays = {} as TrainingDays
+        suggestedTrainingDayNames = []
+        suggestedTrainingExercises = {} as TrainingDays
       } else if (n != p.numberOfTrainingsPerWeek) {
-        console.log('recalc')
-        if (Object.keys(trainingDays).length > n) {
-          trainingDays = Object.fromEntries(Object.entries(trainingDays).slice(0, n)) as TrainingDays
-        }
-        suggestedTrainingDays = suggestMissingDays(trainingDays, n)
+        trainingDays = deleteExcessDays(trainingDays, n)
+        suggestedTrainingDayNames = suggestMissingDayNames(Object.keys(trainingDays) as TWeekDayName[], n)
+        suggestedTrainingExercises = suggestMissingExercises(trainingDays, suggestedTrainingDayNames, exercises)
       }
-      return {...p, numberOfTrainingsPerWeek: n, trainingDays, suggestedTrainingDays}
+      return {...p, numberOfTrainingsPerWeek: n, trainingDays, suggestedTrainingDayNames, suggestedTrainingExercises}
     })
   }
   const onTrainingDayMarkerChange = (day: TWeekDayName, checked: boolean) => {
     setStoredState((p) => {
-      let {trainingDays, suggestedTrainingDays} = p
-      if (day in suggestedTrainingDays) {
-        trainingDays[day] = {...suggestedTrainingDays[day]}
-        delete suggestedTrainingDays[day]
+      let {trainingDays, suggestedTrainingDayNames, numberOfTrainingsPerWeek} = p
+      if (suggestedTrainingDayNames.indexOf(day) != -1) {
+        trainingDays[day] = {exerciseNames: []}
       } else {
         if (checked) {
-          trainingDays[day] = {exercises: []}
+          trainingDays[day] = {exerciseNames: []}
+          if (numberOfTrainingsPerWeek != null) {
+            trainingDays = deleteExcessDays(trainingDays, numberOfTrainingsPerWeek, [day])
+          }
         } else {
           delete trainingDays[day]
         }
       }
-      suggestedTrainingDays = suggestMissingDays(trainingDays, p.numberOfTrainingsPerWeek || 0)
-      return {...p, trainingDays, suggestedTrainingDays}
+      suggestedTrainingDayNames = suggestMissingDayNames(Object.keys(trainingDays) as TWeekDayName[], numberOfTrainingsPerWeek || 0)
+      let suggestedTrainingExercises = suggestMissingExercises(trainingDays, suggestedTrainingDayNames, exercises)
+      return {...p, trainingDays, suggestedTrainingDayNames, numberOfTrainingsPerWeek, suggestedTrainingExercises}
     })
   }
   const setActiveScreen = (activeScreen: string) => {
@@ -236,6 +309,7 @@ function App() {
               <Col className="text-end">
                 <Button variant="outline-primary" className="align-middle"
                         onClick={(e) => setAddExercisesModalShow(true)}
+                        size="sm"
                 >Add</Button>
               </Col>
             </Row>}
@@ -306,8 +380,8 @@ function App() {
                       >
                         {d[0]}
                         <Form.Check type="checkbox" disabled={numberOfTrainingsPerWeek == null}
-                                    style={{opacity: d in storedState.suggestedTrainingDays ? 0.5 : 1}}
-                                    checked={d in storedState.trainingDays || d in storedState.suggestedTrainingDays}
+                                    style={{opacity: storedState.suggestedTrainingDayNames.indexOf(d) != -1 ? 0.5 : 1}}
+                                    checked={d in storedState.trainingDays || storedState.suggestedTrainingDayNames.indexOf(d) != -1}
                                     onChange={(e) => onTrainingDayMarkerChange(d, e.target.checked)}
                         />
                       </Form.Label>
@@ -316,6 +390,53 @@ function App() {
                 </Container>
               </Form>
             </Container>
+            {numberOfTrainingsPerWeek != null && <Container>
+              <br/>
+              {WEEK_DAY_NAMES.filter((d) => d in storedState.trainingDays || storedState.suggestedTrainingDayNames.indexOf(d) != -1)
+                .map((d, i) => <div key={i}
+                  // style={{opacity: d in storedState.trainingDays ? 1 : 0.5}}
+                >
+                  <h5>{d} <span className="muscleGroups">
+                    {(() => {
+                      let primary = []
+                      if (d in storedState.trainingDays) {
+                        for (let ex_name of storedState.trainingDays[d].exerciseNames) {
+                          let ex = exercisesByNames[ex_name]
+                          for (let ex_g of ex.primary_muscle_groups) {
+                            if (primary.indexOf(ex_g) == -1) {
+                              primary.push(ex_g)
+                            }
+                          }
+                        }
+                      }
+                      if (d in storedState.suggestedTrainingExercises) {
+                        for (let ex_name of storedState.suggestedTrainingExercises[d].exerciseNames) {
+                          let ex = exercisesByNames[ex_name]
+                          for (let ex_g of ex.primary_muscle_groups) {
+                            if (primary.indexOf(ex_g) == -1) {
+                              primary.push(ex_g)
+                            }
+                          }
+                        }
+                      }
+                      primary.sort()
+                      return primary.map((m: string, i) => <span className="primary" key={m}>{m.toLowerCase()}</span>)
+                    })()}
+                  </span></h5>
+                  {d in storedState.trainingDays && storedState.trainingDays[d].exerciseNames.map((exName, i) => <Container
+                    className="exerciseListItem" key={i}
+                    onClick={(e) => setViewExerciseModalObj(exercisesByNames[exName])}
+                  >
+                    {exName}
+                  </Container>)}
+                  {d in storedState.suggestedTrainingExercises && storedState.suggestedTrainingExercises[d].exerciseNames.map((exName, i) => <Container
+                    className="exerciseListItem" key={i}
+                    onClick={(e) => setViewExerciseModalObj(exercisesByNames[exName])}
+                  >
+                    {exName}
+                  </Container>)}
+                </div>)}
+            </Container>}
           </>}
           {activeScreen == 'trainings' && <>
             <Container className="text-center">
