@@ -19,6 +19,11 @@ class TextToExercisesResult(models.Model):
     exercises = models.JSONField(null=True)
 
 
+class TrainingLog(models.Model):
+    id = models.AutoField(primary_key=True)
+    date = models.DateField(auto_now_add=True)
+    file = models.FileField(upload_to='training_logs/')
+    text = models.TextField(null=True)
 
 # class Video:
 #     url = models.CharField(max_length=256, unique=True, db_index=True)

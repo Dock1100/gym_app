@@ -223,3 +223,10 @@ async def parse_video_by_url(request):
         'succeed_to_parse': text_to_exercises.succeed_to_parse,
         'exercises': text_to_exercises.exercises,
     }), status=200)
+
+
+def upload_and_parse_training_log(request):
+    a = 2
+    return HttpResponse(json.dumps({
+        'msg': 'ok',
+    }), status=200)

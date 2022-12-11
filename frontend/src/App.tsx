@@ -12,6 +12,11 @@ import {ViewExercisesModal} from "./blocks/view_exercise_modal";
 import {tab} from "@testing-library/user-event/dist/tab";
 import {MUSCLE_GROUPS, TWeekDayName, WEEK_DAY_NAMES} from "./const";
 import {EditTrainingSchedule} from "./blocks/edit_training_schedule";
+import {
+  TrainingLogRecord,
+  TrainingLogRecordModal,
+  TrainingLogRecordModalProps
+} from "./blocks/trainingLogRecordModal";
 
 
 type StoredStateType = {
@@ -252,6 +257,11 @@ function App() {
 
   const [addExercisesModalShow, setAddExercisesModalShow] = useState(false);
   const [viewExerciseModalObj, setViewExerciseModalObj] = useState<Exercise | null>(null)
+  const [editingTrainingLog, setEditingTrainingLog] = useState<{
+    log: Partial<TrainingLogRecord>
+    exerciseName: string
+  } | null>(null)
+
 
   const muscleGroupsWithoutExercises = []
 
@@ -282,7 +292,6 @@ function App() {
     calendarDate = new Date()
   }
   let calendarFirstDay = calendarDate
-  console.log('calendarDate', calendarDate)
   calendarFirstDay = new Date(calendarFirstDay.getFullYear(), calendarFirstDay.getMonth(), 1)
   let firstWeekOffsetDays = calendarFirstDay.getDay()
   if (calendarFirstDay.getDay() != 1) {
@@ -294,7 +303,6 @@ function App() {
   }
   firstWeekOffsetDays = firstWeekOffsetDays - 1
 
-  console.log('calendarFirstDay', calendarFirstDay, firstWeekOffsetDays)
   let calendarWeeksNum = Math.ceil((
     new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 0).getDate()
     + firstWeekOffsetDays
@@ -473,21 +481,26 @@ function App() {
               </table>
             </Container>
 
-            <Container className="text-center">
-              <Button>Record</Button>
-              {/* https://medium.com/@bryanjenningz/how-to-record-and-play-audio-in-javascript-faa1b2b3e49b */}
-            </Container>
-            <br/>
-            
             {calendarExercises.map((exercise, i) => <Container
               className="exerciseListItem" key={i}
-              onClick={(e) => setViewExerciseModalObj(exercise)}
             >
-              {exercise.name}
+              <Row>
+                <Col>{exercise.name}</Col>
+                <Col className="text-end">
+                  <Button size="sm" variant="link" style={{position: 'relative', top: '-2px'}}
+                          onClick={(e) => setViewExerciseModalObj(exercise)}>info</Button>
+                </Col>
+              </Row>
               <div className="muscleGroups">
                 {exercise.primary_muscle_groups.map((m, i) => <span className="primary" key={m}>{m}</span>)}
                 {exercise.secondary_muscle_groups.map((m, i) => <span className="secondary" key={m}>{m}</span>)}
               </div>
+              <br/>
+              <Button onClick={() => setEditingTrainingLog({
+                log: {} as Partial<TrainingLogRecord>,
+                exerciseName: exercise.name,
+              })}>Add</Button>
+
             </Container>)}
           </>}
         </div>
@@ -520,6 +533,21 @@ function App() {
                           exercise={viewExerciseModalObj}
                           setShow={(show) => setViewExerciseModalObj(show ? viewExerciseModalObj : null)}
       />
+
+      <TrainingLogRecordModal
+        value={editingTrainingLog != null ? editingTrainingLog.log : null}
+        title={editingTrainingLog?.exerciseName}
+        setValue={(rec)=> {
+          console.log("change", rec)
+          if (rec == null) {
+            setEditingTrainingLog(null)
+          } else {
+            // @ts-ignore
+            setEditingTrainingLog({...editingTrainingLog, log: rec})
+          }
+        }}
+        onSave={(rec)=> {}}
+     />
     </>
   );
 }
