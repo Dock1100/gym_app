@@ -3,7 +3,7 @@ import Button from 'react-bootstrap/Button';
 
 import './App.scss';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import {Col, Container, Form, InputGroup, Modal, Nav, Navbar, NavDropdown, Row, Stack} from "react-bootstrap";
+import {Col, Container, Form, InputGroup, Modal, Nav, Navbar, NavDropdown, Row, Stack, Table} from "react-bootstrap";
 import axios from "axios";
 import {EditableExerciseBlock} from "./blocks/edit_exercise";
 import {Exercise, TrainingDays} from "./types";
@@ -191,8 +191,10 @@ function App() {
 
   localStorage.setItem('storedState', JSON.stringify(storedState))
 
+  let [calendarDate, setCalendarDate] = useState<Date | null>(null)
 
   const {exercises, activeScreen, numberOfTrainingsPerWeek} = storedState
+
   const exercisesByNames: { [key: string]: Exercise } = {}
   for (let e of exercises) {
     exercisesByNames[e.name] = e
@@ -271,10 +273,54 @@ function App() {
     }
   }
 
+  if (activeScreen == 'calendar' && calendarDate == null) {
+    setCalendarDate(new Date())
+    return <></>
+  }
+
+  if (!calendarDate) {
+    calendarDate = new Date()
+  }
+  let calendarFirstDay = calendarDate
+  console.log('calendarDate', calendarDate)
+  calendarFirstDay = new Date(calendarFirstDay.getFullYear(), calendarFirstDay.getMonth(), 1)
+  let firstWeekOffsetDays = calendarFirstDay.getDay()
+  if (calendarFirstDay.getDay() != 1) {
+    firstWeekOffsetDays = calendarFirstDay.getDay()
+    if (firstWeekOffsetDays == 0) {
+      firstWeekOffsetDays = 7
+    }
+    calendarFirstDay.setDate(calendarFirstDay.getDate() - firstWeekOffsetDays + 1)
+  }
+  firstWeekOffsetDays = firstWeekOffsetDays - 1
+
+  console.log('calendarFirstDay', calendarFirstDay, firstWeekOffsetDays)
+  let calendarWeeksNum = Math.ceil((
+    new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 0).getDate()
+    + firstWeekOffsetDays
+  ) / 7)
+  let nextMonthDate = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 1)
+  if (new Date(nextMonthDate.getTime()).getDay() == 1) {
+    calendarWeeksNum += 1
+  }
+
+  let calendarExercises: Exercise[] = []
+  let day = calendarDate.getDay()
+  if (day == 0) {
+    day = 7
+  }
+  let dayName = WEEK_DAY_NAMES[day - 1]
+  if (dayName in storedState.trainingDays) {
+    calendarExercises = storedState.trainingDays[dayName].exerciseNames.map((name) => exercisesByNames[name])
+  }
+  if (dayName in storedState.suggestedTrainingExercises) {
+    calendarExercises = [...calendarExercises, ...storedState.suggestedTrainingExercises[dayName].exerciseNames.map((name) => exercisesByNames[name])]
+  }
+
   return (
     <>
       <div style={{padding: '48px 0', height: "100%"}}>
-        <div style={{
+        <div className='navigationHeader' style={{
           background: "white",
           lineHeight: '48px',
           boxShadow: "0 0px 10px rgba(0,0,0,0.3)",
@@ -290,7 +336,7 @@ function App() {
                 My exercises
               </Col>
               <Col className="text-end">
-                <Button variant="outline-primary" className="align-middle"
+                <Button variant="outline-primary"
                         onClick={(e) => setAddExercisesModalShow(true)}
                         size="sm"
                 >Add</Button>
@@ -302,6 +348,49 @@ function App() {
                 Training schedule
               </Col>
               <Col className="text-end">
+              </Col>
+            </Row>}
+            {activeScreen == 'trainings' && <Row>
+              <Col><Button variant="outline-primary" size="sm"
+                           onClick={() => {
+                             let current = new Date(calendarDate || new Date())
+                             let daysPrevMonth = new Date(current.getFullYear(), current.getMonth(), 0).getDate()
+                             let prevDate = new Date(current)
+                             if (daysPrevMonth < current.getDate()) {
+                               prevDate = new Date(current.getFullYear(), current.getMonth(), 0)
+                             } else {
+                               prevDate.setMonth(current.getMonth() - 1)
+                             }
+                             setCalendarDate(prevDate)
+                           }}
+              >&lt;</Button></Col>
+              <Col xs={8} className="text-center">
+                <Button variant="outline-primary" size="sm"
+                        onClick={() => setCalendarDate(new Date())}
+                >
+                  {calendarDate &&
+                    (calendarDate.getDate() == new Date().getDate() && calendarDate.getFullYear() == new Date().getFullYear() ? 'Today: ': '') +
+                    calendarDate.toLocaleDateString('en-us', {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric"
+                  })}
+                </Button>
+              </Col>
+              <Col className="text-end">
+                <Button variant="outline-primary" size="sm"
+                        onClick={() => {
+                          let current = new Date(calendarDate || new Date())
+                          let daysNextMonth = new Date(current.getFullYear(), current.getMonth() + 2, 0).getDate()
+                          let nextDate = new Date(current)
+                          if (daysNextMonth < current.getDate()) {
+                            nextDate = new Date(current.getFullYear(), current.getMonth() + 1, 1)
+                          } else {
+                            nextDate.setMonth(current.getMonth() + 1)
+                          }
+                          setCalendarDate(nextDate)
+                        }}
+                >&gt;</Button>
               </Col>
             </Row>}
           </Container>
@@ -340,10 +429,66 @@ function App() {
             exercisesByNames={exercisesByNames}
           />}
           {activeScreen == 'trainings' && <>
+            <Container>
+              <table className={'trainingsTable'}>
+                <thead>
+                <tr>
+                  {WEEK_DAY_NAMES.map((day, i) => <th key={i}>{day[0]}</th>)}
+                </tr>
+                </thead>
+                <tbody>
+                {(() => {
+                  /*prev month, next month, today, selected, training days*/
+                  // {WEEK_DAY_NAMES.map((day, i) => <td key={i}>{i}</td>)}
+                  let rows = []
+                  for (let week_i = 0; week_i < calendarWeeksNum; week_i++) {
+                    let cells = []
+                    for (let i = 0; i < 7; i++) {
+                      let day = new Date(calendarFirstDay.getTime() + (week_i * 7 + i) * 1000 * 86400)
+                      if (day.getDate() == 1) {
+                        // debugger
+                      }
+
+                      cells.push(<td key={i} className={
+                        (
+                          (day.getMonth() > calendarDate.getMonth() || day.getFullYear() > calendarDate.getFullYear()) ? ' next' :
+                            (day.getFullYear() < calendarDate.getFullYear() || day.getMonth() < calendarDate.getMonth()) ? ' prev' : ''
+                        )
+                        + (day.getDate() == calendarDate.getDate() && day.getMonth() == calendarDate.getMonth() ? ' selected' : '')
+                        + (day.getDate() == new Date().getDate() ? ' today' : '')
+                        + (WEEK_DAY_NAMES[i] in storedState.trainingDays || storedState.suggestedTrainingDayNames.indexOf(WEEK_DAY_NAMES[i]) != -1 ? ' trainingDay' : '')
+                      }
+                                    onClick={() => {
+                                      setCalendarDate(day)
+                                    }}
+                      >
+                        <div>{day.getDate()}</div>
+                      </td>)
+                    }
+                    rows.push(<tr key={week_i}>{cells}</tr>)
+                  }
+                  return rows
+                })()}
+                </tbody>
+              </table>
+            </Container>
+
             <Container className="text-center">
               <Button>Record</Button>
               {/* https://medium.com/@bryanjenningz/how-to-record-and-play-audio-in-javascript-faa1b2b3e49b */}
             </Container>
+            <br/>
+            
+            {calendarExercises.map((exercise, i) => <Container
+              className="exerciseListItem" key={i}
+              onClick={(e) => setViewExerciseModalObj(exercise)}
+            >
+              {exercise.name}
+              <div className="muscleGroups">
+                {exercise.primary_muscle_groups.map((m, i) => <span className="primary" key={m}>{m}</span>)}
+                {exercise.secondary_muscle_groups.map((m, i) => <span className="secondary" key={m}>{m}</span>)}
+              </div>
+            </Container>)}
           </>}
         </div>
         <div style={{

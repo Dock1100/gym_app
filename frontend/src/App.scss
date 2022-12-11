@@ -1,14 +1,20 @@
 #root {
-    height: 100%;
-    width: 100%;
+  height: 100%;
+  width: 100%;
+}
+
+.navigationHeader button {
+  top: -2px;
+  position: relative;
+
 }
 
 .exerciseListItem {
-  border-bottom: 1px solid rgba(0,0,0,0.1);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   padding: 0.7em 0;
 
   &:hover {
-    background-color: rgba(0,0,0,0.1);
+    background-color: rgba(0, 0, 0, 0.1);
   }
 }
 
@@ -33,10 +39,95 @@ h5 span.muscleGroups {
   &.primary {
     background-color: #0d6efd;
   }
+
   &.secondary {
     background-color: gray;
   }
+
   &.missing {
     background-color: #ff8585;
   }
 }
+
+.trainingsTable {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 1em;
+
+  td {
+    height: 2em;
+    width: 2em;
+  }
+
+  td, td > div {
+    padding: 0;
+    margin: 0;
+    text-align: center;
+  }
+
+  td > div {
+    display: inline-block;
+    width: 2em;
+    height: 2em;
+    line-height: 2em;
+    border-radius: 50%;
+  }
+
+  td.trainingDay {
+    position: relative;
+
+    div {
+      position: relative;
+      line-height: 2em;
+    }
+
+    &:after {
+      content: "";
+      width: 4px;
+      height: 4px;
+      display: block;
+      position: absolute;
+      background-color: #0d6efd;
+      opacity: 0.5;
+      left: 50%;
+      margin-left: -2px;
+      bottom: 3px;
+      border-radius: 50%;
+    }
+    &.selected {
+      &:after {
+        opacity: 0.8;
+      }
+    }
+  }
+
+  .prev {
+    opacity: 0.5;
+  }
+
+  .next {
+    opacity: 0.5;
+  }
+
+  .today > div {
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.3);
+  }
+
+  .selected > div {
+    box-shadow: inset 0 0 0 1px #0d6efd;
+    color: #0d6efd;
+  }
+
+  .today.selected > div {
+    background-color: #0d6efd;
+    color: white;
+  }
+
+  //td > div {
+  //  &:hover {
+  //    cursor: pointer;
+  //    box-shadow: inset 0 0 0 1px #0d6efd;
+  //  }
+  //}
+}
+
