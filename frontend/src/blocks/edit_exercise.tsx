@@ -1,6 +1,6 @@
 import {Col, Form, Row} from "react-bootstrap";
 import React from "react";
-import {Exercise} from "../types/exercise";
+import {Exercise} from "../types";
 
 
 export type EditableExerciseBlockProps = {

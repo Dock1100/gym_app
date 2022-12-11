@@ -1,3 +1,5 @@
+import {TWeekDayName} from "./const";
+
 export type Exercise = {
   name: string;
   summary: string;
@@ -12,4 +14,10 @@ export type Exercise = {
   steps: {
     text: string;
   }[]
+}
+
+export type TrainingDays = {
+  [key in TWeekDayName]: {
+    exerciseNames: string[]
+  }
 }

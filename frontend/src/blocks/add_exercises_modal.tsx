@@ -1,4 +1,4 @@
-import {Exercise} from "../types/exercise";
+import {Exercise} from "../types";
 import {Form, Modal} from "react-bootstrap";
 import axios from "axios";
 import Button from "react-bootstrap/Button";

@@ -6,30 +6,13 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import {Col, Container, Form, InputGroup, Modal, Nav, Navbar, NavDropdown, Row, Stack} from "react-bootstrap";
 import axios from "axios";
 import {EditableExerciseBlock} from "./blocks/edit_exercise";
-import {Exercise} from "./types/exercise";
+import {Exercise, TrainingDays} from "./types";
 import {AddExercisesModal} from "./blocks/add_exercises_modal";
 import {ViewExercisesModal} from "./blocks/view_exercise_modal";
 import {tab} from "@testing-library/user-event/dist/tab";
+import {MUSCLE_GROUPS, TWeekDayName, WEEK_DAY_NAMES} from "./const";
+import {EditTrainingSchedule} from "./blocks/edit_training_schedule";
 
-
-// https://github.com/microsoft/TypeScript/issues/28046#issuecomment-431871542
-function stringLiterals<T extends string>(...args: T[]): T[] {
-  return args;
-}
-
-type ElementType<T extends ReadonlyArray<unknown>> = T extends ReadonlyArray<infer ElementType> ? ElementType : never;
-
-const MUSCLE_GROUPS = stringLiterals("neck", "chest", "shoulders", "biceps", "forearms", "abs", "thighs", "calves", "back", "triceps", "glutes", "hamstrings");
-type TMuscleGroup = ElementType<typeof MUSCLE_GROUPS>;
-
-const WEEK_DAY_NAMES = stringLiterals('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday');
-type TWeekDayName = ElementType<typeof WEEK_DAY_NAMES>;
-
-type TrainingDays = {
-  [key in TWeekDayName]: {
-    exerciseNames: string[]
-  }
-}
 
 type StoredStateType = {
   exercises: Exercise[],
@@ -346,98 +329,16 @@ function App() {
               </div>
             </Container>)}
           </>}
-          {activeScreen == 'schedule' && <>
-            <Container className="text-center">
-              <Form onSubmit={(e) => {
-                e.preventDefault();
-              }}>
-                <Form.Group>
-                  <Form.Label>How many trainings per week?</Form.Label>
-                  <Form.Select value={numberOfTrainingsPerWeek == null ? "null" : numberOfTrainingsPerWeek}
-                               onChange={(e) => {
-                                 let value: number | null = parseInt(e.target.value)
-                                 if (isNaN(value)) {
-                                   value = null
-                                 }
-                                 setNumberOfTrainingsPerWeek(value)
-                               }}
-                  >
-                    <option value="null">Pick from list</option>
-                    <option value="1">One</option>
-                    <option value="2">Two</option>
-                    <option value="3">Three (recommended for start)</option>
-                    <option value="4">Four</option>
-                    <option value="5">Five</option>
-                    <option value="6">Six</option>
-                    <option value="7">Seven</option>
-                  </Form.Select>
-                </Form.Group>
-                <Container>
-                  <Row>
-                    {WEEK_DAY_NAMES.map((d, i) =>
-                      <Form.Label key={i} column={true}
-                                  className={numberOfTrainingsPerWeek == null ? 'text-muted' : ''}
-                      >
-                        {d[0]}
-                        <Form.Check type="checkbox" disabled={numberOfTrainingsPerWeek == null}
-                                    style={{opacity: storedState.suggestedTrainingDayNames.indexOf(d) != -1 ? 0.5 : 1}}
-                                    checked={d in storedState.trainingDays || storedState.suggestedTrainingDayNames.indexOf(d) != -1}
-                                    onChange={(e) => onTrainingDayMarkerChange(d, e.target.checked)}
-                        />
-                      </Form.Label>
-                    )}
-                  </Row>
-                </Container>
-              </Form>
-            </Container>
-            {numberOfTrainingsPerWeek != null && <Container>
-              <br/>
-              {WEEK_DAY_NAMES.filter((d) => d in storedState.trainingDays || storedState.suggestedTrainingDayNames.indexOf(d) != -1)
-                .map((d, i) => <div key={i}
-                  // style={{opacity: d in storedState.trainingDays ? 1 : 0.5}}
-                >
-                  <h5>{d} <span className="muscleGroups">
-                    {(() => {
-                      let primary = []
-                      if (d in storedState.trainingDays) {
-                        for (let ex_name of storedState.trainingDays[d].exerciseNames) {
-                          let ex = exercisesByNames[ex_name]
-                          for (let ex_g of ex.primary_muscle_groups) {
-                            if (primary.indexOf(ex_g) == -1) {
-                              primary.push(ex_g)
-                            }
-                          }
-                        }
-                      }
-                      if (d in storedState.suggestedTrainingExercises) {
-                        for (let ex_name of storedState.suggestedTrainingExercises[d].exerciseNames) {
-                          let ex = exercisesByNames[ex_name]
-                          for (let ex_g of ex.primary_muscle_groups) {
-                            if (primary.indexOf(ex_g) == -1) {
-                              primary.push(ex_g)
-                            }
-                          }
-                        }
-                      }
-                      primary.sort()
-                      return primary.map((m: string, i) => <span className="primary" key={m}>{m.toLowerCase()}</span>)
-                    })()}
-                  </span></h5>
-                  {d in storedState.trainingDays && storedState.trainingDays[d].exerciseNames.map((exName, i) => <Container
-                    className="exerciseListItem" key={i}
-                    onClick={(e) => setViewExerciseModalObj(exercisesByNames[exName])}
-                  >
-                    {exName}
-                  </Container>)}
-                  {d in storedState.suggestedTrainingExercises && storedState.suggestedTrainingExercises[d].exerciseNames.map((exName, i) => <Container
-                    className="exerciseListItem" key={i}
-                    onClick={(e) => setViewExerciseModalObj(exercisesByNames[exName])}
-                  >
-                    {exName}
-                  </Container>)}
-                </div>)}
-            </Container>}
-          </>}
+          {activeScreen == 'schedule' && <EditTrainingSchedule
+            numberOfTrainingsPerWeek={storedState.numberOfTrainingsPerWeek}
+            setNumberOfTrainingsPerWeek={setNumberOfTrainingsPerWeek}
+            suggestedTrainingDayNames={storedState.suggestedTrainingDayNames}
+            trainingDays={storedState.trainingDays}
+            onTrainingDayMarkerChange={onTrainingDayMarkerChange}
+            suggestedTrainingExercises={storedState.suggestedTrainingExercises}
+            setViewExerciseModalObj={setViewExerciseModalObj}
+            exercisesByNames={exercisesByNames}
+          />}
           {activeScreen == 'trainings' && <>
             <Container className="text-center">
               <Button>Record</Button>
