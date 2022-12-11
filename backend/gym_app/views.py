@@ -16,12 +16,11 @@ import openai
 import demjson
 from demjson import decode
 
-
 import json
 
 from whisper import Whisper
 
-from gym_app.models import Video, TextToExercisesResult
+from gym_app.models import Video, TextToExercisesResult, TrainingLog, TextToTrainingLog
 
 MODEL: Optional[Whisper] = None
 
@@ -47,16 +46,42 @@ is it stretching exercise under key "is_stretching".
 The text is below:
 {}"""
 
+# repeats: number
+#   weight: number
+#   able_to_do_1_more_time: boolean
+#   feel: string - too hard, energetic, exhausted
+#   harm: string[] -
+#                  joint pain, back pain,
+#                  clicks in joints,
+#                  side pain,
+#                  can't breath,
+#                  muscle pain/muscles on fire
+
+TEXT_TO_TRAINING_LOG_PROMPT_TEMPLATE = """Respond in JSON format.
+I have a text recording of my exercises session.
+Get number of repeats I have made, as number, under key "repeats";
+Get lifted/used weight, as number, under key "weight";
+Suggest if I can do one more exercise, as boolean, under key "can_do_one_more_repeat";
+Suggest how I feel, as string, under key "feel";
+"feel" can be "too hard", "energetic", "exhausted";
+Suggest if I had some pain like back, joint, side or muscle pain, as string, under key "pain_type";
+Suggest if I mentioned clicking in joints, as boolean, under key "clicks_in_joints";
+Suggest if I mentioned hard breathing, as boolean, under key "hard_breathing";
+
+The text recording is noisy and with lots of misspellings, it is below:
+{}"""
+
 
 def gpt3complete(prompt):
     print('calling openai')
     completion_tokens = 1500
     max_prompt_length = 4096
-    prompt = prompt[0:(max_prompt_length-completion_tokens)*4]
-    prompt_2 = prompt[0:prompt.rfind('.')+1]
-    if prompt_2:
-        prompt = prompt_2
-    # len(prompt) = 17720; => 4097 tokens, however you requested 4403 tokens (4003 in your prompt; 400 for the completion)
+    # len(prompt) = 17720; failed with error: max is 4097 tokens, however you requested 4403 tokens (4003 in your prompt; 400 for the completion)
+    if len(prompt) > max_prompt_length * 4 - completion_tokens:
+        prompt = prompt[0:max_prompt_length * 4 - completion_tokens]
+        prompt_2 = prompt[0:prompt.rfind('.') + 1]
+        if prompt_2:
+            prompt = prompt_2
     Platformresponse = openai.Completion.create(
         engine="text-davinci-003",
         prompt=prompt,
@@ -65,7 +90,7 @@ def gpt3complete(prompt):
         top_p=1,
         frequency_penalty=0,
         presence_penalty=0,
-        )
+    )
 
     return Platformresponse
 
@@ -93,6 +118,19 @@ def transcribe_file(file: File) -> dict:
     transcript = MODEL.transcribe(file.file.name)
     print('\tdone')
     return transcript
+
+
+def extract_json(text: str, try_list=False) -> dict:
+    start = min(max(0, text.find('{')), max(0, text.find('}')))
+    end = text.rfind('}') + 1
+    if end <= 0:
+        end = len(text)
+    trimmed: str = text[start:end]
+    if trimmed.startswith('{') and try_list:
+        trimmed = '[' + trimmed
+    if trimmed.endswith('}') and try_list:
+        trimmed = trimmed + ']'
+    return demjson.decode(trimmed)
 
 
 async def parse_video_by_url(request):
@@ -145,16 +183,7 @@ async def parse_video_by_url(request):
     if not text_to_exercises.exercises or not text_to_exercises.succeed_to_parse:
         text_to_parse = text_to_exercises.openapi_response['choices'][0]['text']
         try:
-            start = min(max(0, text_to_parse.find('{')), max(0, text_to_parse.find('}')))
-            end = text_to_parse.rfind('}')+1
-            if end <= 0:
-                end = len(text_to_parse)
-            trimmed: str = text_to_parse[start:end]
-            if trimmed.startswith('{'):
-                trimmed = '[' + trimmed
-            if trimmed.endswith('}'):
-                trimmed = trimmed + ']'
-            exercises_raw = demjson.decode(trimmed)
+            exercises_raw = extract_json(text_to_parse, try_list=True)
             if not isinstance(exercises_raw, list):
                 if 'exercises' in exercises_raw:
                     exercises_raw = exercises_raw['exercises']
@@ -181,8 +210,8 @@ async def parse_video_by_url(request):
                 }
                 equipment = exercise_raw['equipment']
                 if (not equipment
-                    or (isinstance(equipment, str) and equipment.lower() in ('none', 'no'))
-                    ):
+                        or (isinstance(equipment, str) and equipment.lower() in ('none', 'no'))
+                ):
                     equipment = None
                 ex['equipment'] = equipment
                 steps_raw = exercise_raw['moves']
@@ -226,7 +255,73 @@ async def parse_video_by_url(request):
 
 
 def upload_and_parse_training_log(request):
-    a = 2
+    file = request.FILES['file']
+    rec_key = request.POST['rec_key']
+    try:
+        rec = TrainingLog.objects.get(key=rec_key)
+        # rec.file = file
+        # rec.save()
+    except TrainingLog.DoesNotExist:
+        rec = TrainingLog(key=rec_key)
+        rec.file = file
+        rec.save()
+
+    if not rec.transcript_json or not rec.transcript_text:
+        print('transcribing')
+        transcript = transcribe_file(rec.file)
+        rec.transcript_json = transcript
+        rec.transcript_text = transcript['text']
+        rec.save()
+
+    try:
+        text_to_training_log = TextToTrainingLog.objects.get(
+            transcript_text=rec.transcript_text,
+            openapi_prompt_template=TEXT_TO_TRAINING_LOG_PROMPT_TEMPLATE
+        )
+    except TextToTrainingLog.DoesNotExist:
+        openapi_prompt = TEXT_TO_TRAINING_LOG_PROMPT_TEMPLATE.format(rec.transcript_text)
+        openapi_response = gpt3complete(openapi_prompt)
+        text_to_training_log = TextToTrainingLog(
+            transcript_text=rec.transcript_text,
+            openapi_prompt_template=TEXT_TO_TRAINING_LOG_PROMPT_TEMPLATE,
+            openapi_response=json.loads(json.dumps(openapi_response))
+        )
+        text_to_training_log.save()
+
+    if not text_to_training_log.training_log or not text_to_training_log.succeed_to_parse:
+        text_to_parse = text_to_training_log.openapi_response['choices'][0]['text']
+        try:
+            log_raw = extract_json(text_to_parse, try_list=False)
+            log = {}
+            log['repeats'] = int(log_raw['repeats'])
+            log['weight'] = int(log_raw['weight'])
+            log['able_to_do_more'] = log_raw['can_do_one_more_repeat']
+            log['feel'] = log_raw['feel']
+            pain = log_raw['pain_type']
+            if (not pain
+                    or (isinstance(pain, str) and pain.lower() in ('none', 'no'))
+                    or (isinstance(pain, list) and len(pain) == 1 and pain[0].lower() in ('none', 'no'))
+            ):
+                pain = None
+            clicks_in_joints = log_raw['clicks_in_joints']
+            hard_breathing = log_raw['hard_breathing']
+            harm = []
+            if pain:
+                harm.append('pain')
+            if clicks_in_joints:
+                harm.append('clicks_in_joints')
+            if hard_breathing:
+                harm.append('hard_breathing')
+            log['harm'] = harm
+
+            text_to_training_log.succeed_to_parse = True
+            text_to_training_log.training_log = log
+            text_to_training_log.save()
+        except Exception as e:
+            text_to_training_log.succeed_to_parse = False
+            text_to_training_log.save()
+
     return HttpResponse(json.dumps({
-        'msg': 'ok',
+        'succeed_to_parse': text_to_training_log.succeed_to_parse,
+        'training_log': text_to_training_log.training_log if text_to_training_log.succeed_to_parse else 'FAIL',
     }), status=200)

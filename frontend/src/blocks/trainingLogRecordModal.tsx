@@ -21,10 +21,102 @@ export type TrainingLogRecordModalProps = {
   onSave(value: Partial<TrainingLogRecord>): void
 }
 
+const MAX_REC_LENGTH_MS = 500
+
+const createMicRecorder = (onRecorded: ({micRec, recorder}:{micRec: Blob, recorder: MediaRecorder}) => void, maxDurationMs: number = MAX_REC_LENGTH_MS) => {
+  return new Promise<MediaRecorder>((resolve, reject) => {
+    navigator.mediaDevices.getUserMedia({audio: true}).then(stream => {
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.start();
+      const audioChunks: Blob[] = [];
+
+      const cleanup = () => {
+        console.log("cleanup");
+        if (mediaRecorder.state !== 'inactive') {
+          mediaRecorder.stop();
+        }
+        stream.getTracks().forEach(track => track.stop());
+      }
+
+      mediaRecorder.addEventListener("dataavailable", event => {
+        audioChunks.push(event.data);
+      });
+
+      mediaRecorder.addEventListener("stop", () => {
+        const audioBlob = new Blob(audioChunks);
+        audioBlob.arrayBuffer().then((data) => {
+          console.log('arrayBuffer', data)
+        })
+        cleanup();
+        onRecorded({micRec: audioBlob, recorder: mediaRecorder});
+      });
+
+      mediaRecorder.addEventListener("error", (e) => {
+        cleanup();
+        console.log('mediaRecorder.error', e)
+        debugger;
+        reject(e);
+      });
+      setTimeout(() => {
+        if (mediaRecorder.state !== 'inactive') {
+          mediaRecorder.stop();
+        }
+      }, maxDurationMs);
+      resolve(mediaRecorder);
+    }).catch((err) => {
+      console.error(`failed to create media recorder`, err)
+      debugger;
+      reject(err)
+    });
+  });
+}
+
+
 export function TrainingLogRecordModal({title, value, setValue, onSave}: TrainingLogRecordModalProps) {
   const show = value != null;
 
   const handleClose = () => setValue(null);
+  const [activeRecorder, setActiveRecorder] = useState<MediaRecorder | null>(null);
+
+  const toggleRecording = () => {
+    if (activeRecorder) {
+      if (activeRecorder.state !== 'inactive') {
+        activeRecorder.stop();
+      }
+      setActiveRecorder(null);
+    } else {
+      createMicRecorder(({micRec, recorder}) => {
+        console.log('micRec', micRec)
+        let formData = new FormData();
+        let mime = recorder.mimeType;
+        let ext = mime.split('/')[1].split(';')[0];
+        let fileName = `rec_${Date.now()}.${ext}`;
+        let file = new File([micRec], fileName);
+        formData.append('file', file, fileName);
+        // ' I left it 20 kilos back hearts a lot. I had no better than 10 times.'
+        // formData.append('rec_key', 'hard_back_pain');
+        // 20 times, 5 kilos, easy
+        formData.append('rec_key', 'quite_easy');
+        // ' 15 times 8 kilos was not easy but really good.'
+        // formData.append('rec_key', 'energy');
+
+
+        setActiveRecorder(null);
+
+        return axios.post(`/api/upload_and_parse_training_log`,
+          formData, {
+            headers: {
+              'Content-Type': `multipart/form-data`,
+            },
+          }).then((response)=>{
+            console.log('response', response)
+            console.log('data', response.data)
+        })
+      }).then((mediaRecorder) => {
+        setActiveRecorder(mediaRecorder);
+      })
+    }
+  }
 
   return <Modal show={show} onHide={handleClose} backdrop="static"
                 keyboard={false}
@@ -122,7 +214,7 @@ export function TrainingLogRecordModal({title, value, setValue, onSave}: Trainin
     <Modal.Footer className='flex-grow-1 w-100'>
       <Row className="w-100">
         <Col>
-          <Button>Record</Button>
+          <Button onClick={toggleRecording}>{!activeRecorder ? 'Record' : 'Stop'}</Button>
           {/* https://medium.com/@bryanjenningz/how-to-record-and-play-audio-in-javascript-faa1b2b3e49b */}
         </Col>
         <Col className='text-end'>

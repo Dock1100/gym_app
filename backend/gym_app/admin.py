@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 # Register your models here.
-from gym_app.models import Video, TextToExercisesResult
+from gym_app.models import Video, TextToExercisesResult, TrainingLog, TextToTrainingLog
 
 
 def get_fields(model):
@@ -16,3 +16,13 @@ class VideoAdmin(admin.ModelAdmin):
 @admin.register(TextToExercisesResult)
 class TextToExercisesResultAdmin(admin.ModelAdmin):
     list_display = get_fields(TextToExercisesResult)
+
+
+@admin.register(TrainingLog)
+class TrainingLogAdmin(admin.ModelAdmin):
+    list_display = ['id', 'key', 'transcript_text', 'file', 'date']
+
+
+@admin.register(TextToTrainingLog)
+class TextToTrainingLogAdmin(admin.ModelAdmin):
+    list_display = ['transcript_text', 'training_log']

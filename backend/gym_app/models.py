@@ -21,9 +21,20 @@ class TextToExercisesResult(models.Model):
 
 class TrainingLog(models.Model):
     id = models.AutoField(primary_key=True)
+    key = models.CharField(max_length=256, db_index=True, null=True)
     date = models.DateField(auto_now_add=True)
     file = models.FileField(upload_to='training_logs/')
-    text = models.TextField(null=True)
+    transcript_text = models.TextField(null=True)
+    transcript_json = models.JSONField(null=True)
+
+
+class TextToTrainingLog(models.Model):
+    transcript_text = models.TextField()
+    openapi_prompt_template = models.TextField()
+    openapi_response = models.JSONField()
+    succeed_to_parse = models.BooleanField(null=True)
+    training_log = models.JSONField(null=True)
+
 
 # class Video:
 #     url = models.CharField(max_length=256, unique=True, db_index=True)
