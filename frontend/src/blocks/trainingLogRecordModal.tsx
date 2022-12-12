@@ -4,14 +4,35 @@ import axios from "axios";
 import Button from "react-bootstrap/Button";
 import {EditableExerciseBlock} from "./edit_exercise";
 import React, {useState} from "react";
+import {ElementType, stringLiterals} from "../const";
 
+
+export const FEEL_OPTIONS = stringLiterals("bad", "exhausted", "ok", "energetic");
+export type TFeelOption = ElementType<typeof FEEL_OPTIONS>;
+
+export const FEEL_ICONS = {
+  bad: "🤢",
+  exhausted: "😮‍💨",
+  ok: "😐",
+  energetic: "🤩",
+}
+
+export const HARM_OPTIONS = stringLiterals("no_air", "dizzy", "joint_clicks", "pain");
+export type THarmOption = ElementType<typeof HARM_OPTIONS>;
+
+export const HARM_ICONS = {
+  no_air: "🫁🚫",
+  dizzy: "😵‍💫",
+  joint_clicks: "🦿‍🩹",
+  pain: "💪‍🩹",
+}
 
 export type TrainingLogRecord = {
   repeats: number
   weight: number
   able_to_do_1_more_time: boolean
-  feel: string
-  harm: string[]
+  feel: TFeelOption
+  harm: THarmOption[]
 }
 
 export type TrainingLogRecordModalProps = {
@@ -23,7 +44,10 @@ export type TrainingLogRecordModalProps = {
 
 const MAX_REC_LENGTH_MS = 500
 
-const createMicRecorder = (onRecorded: ({micRec, recorder}:{micRec: Blob, recorder: MediaRecorder}) => void, maxDurationMs: number = MAX_REC_LENGTH_MS) => {
+const createMicRecorder = (onRecorded: ({
+                                          micRec,
+                                          recorder
+                                        }: { micRec: Blob, recorder: MediaRecorder }) => void, maxDurationMs: number = MAX_REC_LENGTH_MS) => {
   return new Promise<MediaRecorder>((resolve, reject) => {
     navigator.mediaDevices.getUserMedia({audio: true}).then(stream => {
       const mediaRecorder = new MediaRecorder(stream);
@@ -73,9 +97,16 @@ const createMicRecorder = (onRecorded: ({micRec, recorder}:{micRec: Blob, record
 
 
 export function TrainingLogRecordModal({title, value, setValue, onSave}: TrainingLogRecordModalProps) {
+  const [showInfoModal, setShowInfoModal] = useState<'harm' | 'feel' | null>(null);
   const show = value != null;
+  const showMainModal = show && showInfoModal == null;
 
-  const handleClose = () => setValue(null);
+  const handleMainClose = () => {
+    setValue(null);
+  }
+  const handleInfoClose = () => {
+    setShowInfoModal(null);
+  }
   const [activeRecorder, setActiveRecorder] = useState<MediaRecorder | null>(null);
 
   const toggleRecording = () => {
@@ -108,9 +139,9 @@ export function TrainingLogRecordModal({title, value, setValue, onSave}: Trainin
             headers: {
               'Content-Type': `multipart/form-data`,
             },
-          }).then((response)=>{
-            console.log('response', response)
-            console.log('data', response.data)
+          }).then((response) => {
+          console.log('response', response)
+          console.log('data', response.data)
         })
       }).then((mediaRecorder) => {
         setActiveRecorder(mediaRecorder);
@@ -118,110 +149,130 @@ export function TrainingLogRecordModal({title, value, setValue, onSave}: Trainin
     }
   }
 
-  return <Modal show={show} onHide={handleClose} backdrop="static"
-                keyboard={false}
-                centered
-                size="sm"
-                className={"training-log-record-modal"}
-  >
-    <Modal.Header closeButton>
-      <Modal.Title>{title || 'TrainingLog'}</Modal.Title>
-    </Modal.Header>
-    <Modal.Body>
-      <Form>
-        <Form.Group as={Row}>
-          <Form.Label column xs="4">Repeats</Form.Label>
-          <Col xs="8">
-            <InputGroup className="w-100">
-              <Form.Control type="number" placeholder="repeats" min="1" step="1"
-                            value={value?.repeats || ''}
-                            onChange={(e) => {
-                              let v = parseInt(e.target.value)
-                              setValue({...value, repeats: isNaN(v) ? undefined : Math.max(1, v)})
-                            }}
-              />
-              <Button variant="outline-secondary"
-                      onClick={() => setValue({...value, repeats: value?.repeats ? value.repeats + 1 : 1})}
-              >+</Button>
-              <Button variant="outline-secondary"
-                      onClick={() => setValue({...value, repeats: value?.repeats ? Math.max(value.repeats - 1, 1) : 1})}
-              >-</Button>
-            </InputGroup>
+  return <>
+    <Modal show={showMainModal} onHide={handleMainClose} backdrop="static"
+           keyboard={false}
+           centered
+           className={"training-log-record-modal"}
+    >
+      <Modal.Header closeButton>
+        <Modal.Title>{title || 'TrainingLog'}</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <Form>
+          <Form.Group as={Row}>
+            <Form.Label column xs="4">Repeats</Form.Label>
+            <Col xs="8">
+              <InputGroup className="w-100">
+                <Form.Control type="number" placeholder="repeats" min="1" step="1"
+                              value={value?.repeats || ''}
+                              onChange={(e) => {
+                                let v = parseInt(e.target.value)
+                                setValue({...value, repeats: isNaN(v) ? undefined : Math.max(1, v)})
+                              }}
+                />
+                <Button variant="outline-secondary"
+                        onClick={() => setValue({...value, repeats: value?.repeats ? value.repeats + 1 : 1})}
+                >+</Button>
+                <Button variant="outline-secondary"
+                        onClick={() => setValue({
+                          ...value,
+                          repeats: value?.repeats ? Math.max(value.repeats - 1, 1) : 1
+                        })}
+                >-</Button>
+              </InputGroup>
+            </Col>
+          </Form.Group>
+          <Form.Group as={Row}>
+            <Form.Label column xs="4">Weight</Form.Label>
+            <Col xs="8">
+              <InputGroup>
+                <Form.Control type="number" placeholder="weight" min="1" step="0.5"
+                              value={(value === undefined || value === null) ? '' : value.weight}
+                              onChange={(e) => {
+                                let lastChar = e.target.value[e.target.value.length - 1]
+                                if (lastChar === '.' || lastChar === ',') {
+                                  // @ts-ignore
+                                  setValue({...value, weight: e.target.value})
+                                }
+                                let v = parseFloat(e.target.value)
+                                setValue({
+                                  ...value,
+                                  weight: isNaN(v) ? undefined : Math.max(0, Math.round(v * 100) / 100)
+                                })
+                              }}/>
+                <Button variant="outline-secondary"
+                        onClick={() => setValue({...value, weight: value?.weight ? value.weight + 0.5 : 0.5})}
+                >+</Button>
+                <Button variant="outline-secondary"
+                        onClick={() => setValue({
+                          ...value,
+                          weight: value?.weight ? Math.max(value.weight - 0.5, 0) : 0
+                        })}
+                >-</Button>
+              </InputGroup>
+            </Col>
+          </Form.Group>
+          <Form.Group as={Row}>
+            <Col><Form.Label htmlFor="oneMoreSwitch">Can do 1 more?</Form.Label></Col>
+            <Col><Form.Check type="switch" id="oneMoreSwitch"/></Col>
+          </Form.Group>
+          <Form.Group as={Row}>
+            <Form.Label column xs="3">Feel <a href='#' onClick={() => setShowInfoModal('feel')}>i</a>
+            </Form.Label>
+            <Col xs="9">
+              <InputGroup className="w-100">
+                {FEEL_OPTIONS.map((feel, i) =>
+                  <Button key={i} className='icon flex-grow-1'
+                          variant={((value?.feel !== feel) ? 'outline-' : '') + "secondary"}
+                          onClick={(e) => setValue({...value, feel: (value?.feel == feel) ? undefined : feel})}
+                  >{FEEL_ICONS[feel]}</Button>)}
+                {/*Button - pick custom*/}
+              </InputGroup>
+            </Col>
+          </Form.Group>
+          <Form.Group as={Row}>
+            <Form.Label column xs="3">Harm <a href='#' onClick={() => setShowInfoModal('harm')}>i</a></Form.Label>
+            <Col xs="9">
+              <InputGroup className="w-100">
+                {HARM_OPTIONS.map((harm, i) =>
+                  <Button key={i} className='icon  flex-grow-1'
+                          variant={(!(value?.harm && value.harm.indexOf(harm) > -1) ? 'outline-' : '') + "secondary"}
+                          onClick={(e) => setValue({...value,
+                            harm: (value?.harm && value.harm.indexOf(harm) > -1)
+                              ? value.harm.filter((h) => h !== harm)
+                              : (value?.harm || []).concat([harm])})}
+                  >{HARM_ICONS[harm]}</Button>)}
+              </InputGroup>
+            </Col>
+          </Form.Group>
+        </Form>
+      </Modal.Body>
+      <Modal.Footer className='flex-grow-1 w-100'>
+        <Row className="w-100">
+          <Col>
+            <Button onClick={toggleRecording}>{!activeRecorder ? 'Record' : 'Stop'}</Button>
+            {/* https://medium.com/@bryanjenningz/how-to-record-and-play-audio-in-javascript-faa1b2b3e49b */}
           </Col>
-        </Form.Group>
-        <Form.Group as={Row}>
-          <Form.Label column xs="4">Weight</Form.Label>
-          <Col xs="8">
-            <InputGroup>
-              <Form.Control type="number" placeholder="weight" min="1" step="0.5"
-                            value={(value === undefined || value === null) ? '' : value.weight}
-                            onChange={(e) => {
-                              let lastChar = e.target.value[e.target.value.length - 1]
-                              if (lastChar === '.' || lastChar === ',') {
-                                // @ts-ignore
-                                setValue({...value, weight: e.target.value})
-                              }
-                              let v = parseFloat(e.target.value)
-                              setValue({
-                                ...value,
-                                weight: isNaN(v) ? undefined : Math.max(0, Math.round(v * 100) / 100)
-                              })
-                            }}/>
-              <Button variant="outline-secondary"
-                      onClick={() => setValue({...value, weight: value?.weight ? value.weight + 0.5 : 0.5})}
-              >+</Button>
-              <Button variant="outline-secondary"
-                      onClick={() => setValue({...value, weight: value?.weight ? Math.max(value.weight - 0.5, 0) : 0})}
-              >-</Button>
-            </InputGroup>
+          <Col className='text-end'>
+            <Button disabled>Save</Button>
           </Col>
-        </Form.Group>
-        <Form.Group as={Row}>
-          <Col><Form.Label htmlFor="oneMoreSwitch">Can do 1 more?</Form.Label></Col>
-          <Col><Form.Check type="switch" id="oneMoreSwitch"/></Col>
-        </Form.Group>
-        <Form.Group as={Row}>
-          <Form.Label column xs="4">Feel</Form.Label>
-          <Col xs="8">
-            <InputGroup className="w-100">
-              {/*too hard, energetic, exhausted*/}
-              <Button className='icon' variant="outline-danger flex-grow-1" value="exhausted">☠️</Button>
-              <Button className='icon' variant="outline-secondary flex-grow-1" value="too-hard">🪨</Button>
-              <Button className='icon' variant="outline-primary flex-grow-1" value="energetic">🔋</Button>
-              {/*Button - pick custom*/}
-            </InputGroup>
-          </Col>
-        </Form.Group>
-        <Form.Group as={Row}>
-          <Form.Label column xs="4">Pain</Form.Label>
-          <Col xs="8">
-            <InputGroup className="w-100">
-              {/*joint pain, back pain,
-                 clicks in joints,
-                 side pain,
-                 can't breath,
-                 muscle pain/muscles on fire (ok)
-                 */}
-              <Button className='icon' variant="outline-secondary flex-grow-1">1</Button>
-              <Button className='icon' variant="outline-secondary flex-grow-1">2</Button>
-              <Button className='icon' variant="outline-secondary flex-grow-1">3</Button>
-              <Button className='icon' variant="outline-secondary flex-grow-1">4</Button>
-            </InputGroup>
-          </Col>
-        </Form.Group>
-      </Form>
-    </Modal.Body>
-    <Modal.Footer className='flex-grow-1 w-100'>
-      <Row className="w-100">
-        <Col>
-          <Button onClick={toggleRecording}>{!activeRecorder ? 'Record' : 'Stop'}</Button>
-          {/* https://medium.com/@bryanjenningz/how-to-record-and-play-audio-in-javascript-faa1b2b3e49b */}
-        </Col>
-        <Col className='text-end'>
-          <Button disabled>Save</Button>
-        </Col>
-      </Row>
+        </Row>
 
-    </Modal.Footer>
-  </Modal>
+      </Modal.Footer>
+    </Modal>
+    <Modal show={showInfoModal != null} onHide={handleInfoClose} centered>
+      <Modal.Header closeButton>
+        <Modal.Title>Info</Modal.Title>
+        <Modal.Body>
+          {showInfoModal === 'feel' &&
+            FEEL_OPTIONS.map((icon, i) =>
+              <Button key={i} className='icon' variant="outline-secondary">{FEEL_ICONS[icon]}</Button>)}
+          {showInfoModal === 'harm' &&
+            HARM_OPTIONS.map((icon, i) =>
+              <Button key={i} className='icon' variant="outline-secondary">{HARM_ICONS[icon]}</Button>)}
+        </Modal.Body>
+      </Modal.Header>
+    </Modal>
+  </>
 }

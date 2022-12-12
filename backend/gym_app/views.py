@@ -63,10 +63,13 @@ Get number of repeats I have made, as number, under key "repeats";
 Get lifted/used weight, as number, under key "weight";
 Suggest if I can do one more exercise, as boolean, under key "can_do_one_more_repeat";
 Suggest how I feel, as string, under key "feel";
-"feel" can be "too hard", "energetic", "exhausted";
-Suggest if I had some pain like back, joint, side or muscle pain, as string, under key "pain_type";
-Suggest if I mentioned clicking in joints, as boolean, under key "clicks_in_joints";
-Suggest if I mentioned hard breathing, as boolean, under key "hard_breathing";
+"feel" must be "energetic", "ok", "exhausted", "bad";
+Did I have some pain like back, joint, side or muscle pain, as string, under key "pain";
+Did I have burning muscles, as boolean, under key "burning_muscles";
+Did my I joints clicked or cracked, as boolean, under key "clicks_in_joints";
+Suggest if I was hard breathing, as boolean, under key "hard_breathing";
+Suggest if I was missing air or had suffocation, as boolean, under key "no_air";
+Suggest if I had dizziness, vertigo, giddiness, as boolean, under key "dizziness";
 
 The text recording is noisy and with lots of misspellings, it is below:
 {}"""
@@ -254,6 +257,42 @@ async def parse_video_by_url(request):
     }), status=200)
 
 
+def parse_gpt_training_log(text_to_parse: str) -> dict:
+    log_raw = extract_json(text_to_parse, try_list=False)
+    log = {}
+    log['repeats'] = int(log_raw['repeats'])
+    log['weight'] = int(log_raw['weight'])
+    log['able_to_do_more'] = log_raw['can_do_one_more_repeat']
+    log['feel'] = log_raw['feel']
+    harm = []
+    pain = log_raw['pain'].replace('pain', '').strip()
+    if (not pain
+            or (isinstance(pain, str) and pain.lower() in ('none', 'no'))
+            or (isinstance(pain, list) and len(pain) == 1 and pain[0].lower() in ('none', 'no'))
+    ):
+        pain = None
+    if pain:
+        harm.append('pain_%s' % pain)
+    clicks_in_joints = log_raw['clicks_in_joints']
+    if clicks_in_joints:
+        harm.append('joint_clicks')
+    hard_breathing = log_raw['hard_breathing']
+    if hard_breathing:
+        harm.append('hard_breathing')
+    dizziness = log_raw['dizziness']
+    if dizziness:
+        harm.append('dizziness')
+    burning_muscles = log_raw['burning_muscles']
+    if burning_muscles:
+        harm.append('burning_muscles')
+    no_air = log_raw['no_air']
+    if no_air:
+        harm.append('no_air')
+
+    log['harm'] = harm
+    return log
+
+
 def upload_and_parse_training_log(request):
     file = request.FILES['file']
     rec_key = request.POST['rec_key']
@@ -291,29 +330,7 @@ def upload_and_parse_training_log(request):
     if not text_to_training_log.training_log or not text_to_training_log.succeed_to_parse:
         text_to_parse = text_to_training_log.openapi_response['choices'][0]['text']
         try:
-            log_raw = extract_json(text_to_parse, try_list=False)
-            log = {}
-            log['repeats'] = int(log_raw['repeats'])
-            log['weight'] = int(log_raw['weight'])
-            log['able_to_do_more'] = log_raw['can_do_one_more_repeat']
-            log['feel'] = log_raw['feel']
-            pain = log_raw['pain_type']
-            if (not pain
-                    or (isinstance(pain, str) and pain.lower() in ('none', 'no'))
-                    or (isinstance(pain, list) and len(pain) == 1 and pain[0].lower() in ('none', 'no'))
-            ):
-                pain = None
-            clicks_in_joints = log_raw['clicks_in_joints']
-            hard_breathing = log_raw['hard_breathing']
-            harm = []
-            if pain:
-                harm.append('pain')
-            if clicks_in_joints:
-                harm.append('clicks_in_joints')
-            if hard_breathing:
-                harm.append('hard_breathing')
-            log['harm'] = harm
-
+            log = parse_gpt_training_log(text_to_parse)
             text_to_training_log.succeed_to_parse = True
             text_to_training_log.training_log = log
             text_to_training_log.save()
@@ -325,3 +342,51 @@ def upload_and_parse_training_log(request):
         'succeed_to_parse': text_to_training_log.succeed_to_parse,
         'training_log': text_to_training_log.training_log if text_to_training_log.succeed_to_parse else 'FAIL',
     }), status=200)
+
+
+def reprocess_all_audio(request):
+    all_recs = TrainingLog.objects.filter(key__isnull=False).order_by('date').all()
+    data = []
+    for i, rec in enumerate(all_recs):
+        print(i, '/', len(all_recs))
+        if not rec.transcript_json:
+            print('transcribing')
+            transcript = transcribe_file(rec.file)
+            rec.transcript_json = transcript
+            rec.transcript_text = transcript['text']
+            rec.save()
+        if not rec.transcript_text:
+            continue
+        try:
+            text_to_training_log = TextToTrainingLog.objects.get(
+                transcript_text=rec.transcript_text,
+                openapi_prompt_template=TEXT_TO_TRAINING_LOG_PROMPT_TEMPLATE
+            )
+        except TextToTrainingLog.DoesNotExist:
+            openapi_prompt = TEXT_TO_TRAINING_LOG_PROMPT_TEMPLATE.format(rec.transcript_text)
+            openapi_response = gpt3complete(openapi_prompt)
+            text_to_training_log = TextToTrainingLog(
+                transcript_text=rec.transcript_text,
+                openapi_prompt_template=TEXT_TO_TRAINING_LOG_PROMPT_TEMPLATE,
+                openapi_response=json.loads(json.dumps(openapi_response))
+            )
+            text_to_training_log.save()
+        if not text_to_training_log.training_log or not text_to_training_log.succeed_to_parse:
+            text_to_parse = text_to_training_log.openapi_response['choices'][0]['text']
+            try:
+                log = parse_gpt_training_log(text_to_parse)
+                text_to_training_log.succeed_to_parse = True
+                text_to_training_log.training_log = log
+                text_to_training_log.save()
+            except Exception as e:
+                text_to_training_log.succeed_to_parse = False
+                text_to_training_log.save()
+        data.append({
+            'text': rec.transcript_text,
+            'succeed_to_parse': text_to_training_log.succeed_to_parse,
+            'log': text_to_training_log.training_log if text_to_training_log.succeed_to_parse else 'FAIL',
+            'openapi_response': text_to_training_log.openapi_response['choices'][0]['text'],
+        })
+
+    return HttpResponse(json.dumps(data, indent=True), headers={'content-type': 'application/json'}, status=200)
+
