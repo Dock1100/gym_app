@@ -33,6 +33,7 @@ export const HARM_ICONS = {
 }
 
 export const GOOD_HARM_OPTIONS = ["burn"];
+export const BAD_HARM_OPTIONS = ["joint"];
 
 export type TrainingLogRecord = {
   repeats: number
@@ -40,6 +41,7 @@ export type TrainingLogRecord = {
   able_to_do_1_more_time: boolean
   feel: TFeelOption
   harm: THarmOption[]
+  tips?: string | null
 }
 
 export type TrainingLogRecordModalProps = {
@@ -131,8 +133,7 @@ export function TrainingLogRecordModal({title, value, setValue, onSave}: Trainin
         let fileName = `rec_${Date.now()}.${ext}`;
         let file = new File([micRec], fileName);
         formData.append('file', file, fileName);
-        let recKey = ['hard_back_pain', 'quite_easy', 'energy'][Math.floor(Math.random()*3)]
-        formData.append('rec_key', recKey);
+        formData.append('rec_key', 'random');
         // ' I left it 20 kilos back hearts a lot. I had no better than 10 times.'
         // formData.append('rec_key', 'hard_back_pain');
         // 20 times, 5 kilos, easy
@@ -157,7 +158,8 @@ export function TrainingLogRecordModal({title, value, setValue, onSave}: Trainin
               weight: log.weight,
               able_to_do_1_more_time: log.able_to_do_more,
               feel: log.feel,
-              harm: log.harm
+              harm: log.harm,
+              tips: log.tips,
             })
           }
         })
@@ -167,6 +169,27 @@ export function TrainingLogRecordModal({title, value, setValue, onSave}: Trainin
     }
   }
 
+  let tipsText = value?.tips || '';
+  if (tipsText.length == 0) {
+    let tips = []
+    let hasHarm = (value?.harm && value.harm.length > 0) || (value?.feel && value?.feel == 'bad');
+    let hasBadHarm = value?.harm?.some((h) => BAD_HARM_OPTIONS.includes(h));
+    let hasGoodHarm = value?.harm?.some((h) => GOOD_HARM_OPTIONS.includes(h));
+    if (hasHarm) {
+      tips.push('Take rest and reduce the weight you are using.')
+    }
+    if (hasBadHarm) {
+      tips.push('Speak to a medical if your pain or joint clicks persists for a long time.')
+    }
+    if (!hasBadHarm && (hasGoodHarm || !value?.able_to_do_1_more_time)) {
+      if (value?.feel == 'bad')
+        tips.push('You did great, but next time try easier.')
+    } else {
+      tips.push('Nicely done, keep pushing.')
+    }
+    tipsText = tips.join(' ');
+  }
+
   return <>
     <Modal show={showMainModal} onHide={handleMainClose} backdrop="static"
            keyboard={false}
@@ -174,7 +197,7 @@ export function TrainingLogRecordModal({title, value, setValue, onSave}: Trainin
            className={"training-log-record-modal"}
     >
       <Modal.Header closeButton>
-        <Modal.Title>{title || 'TrainingLog'}</Modal.Title>
+        <Modal.Title className="h5 text-center">{title || 'TrainingLog'}</Modal.Title>
       </Modal.Header>
       <Modal.Body>
         <Form>
@@ -232,17 +255,18 @@ export function TrainingLogRecordModal({title, value, setValue, onSave}: Trainin
             </Col>
           </Form.Group>
           <Form.Group as={Row}>
-            <Col xs={8}><Form.Label htmlFor="oneMoreSwitch">Can do no more?</Form.Label></Col>
+            <Col xs={8}><Form.Label htmlFor="oneMoreSwitch">Can not do one more?</Form.Label></Col>
             <Col xs={4}><Form.Check type="switch" id="oneMoreSwitch"
-                             checked={!value?.able_to_do_1_more_time}
-                             onClick={(e) => {
-                               // @ts-ignore
-                               setValue({...value, able_to_do_1_more_time: !e.target.checked})
-                             }}
+                                    checked={!value?.able_to_do_1_more_time}
+                                    onClick={(e) => {
+                                      // @ts-ignore
+                                      setValue({...value, able_to_do_1_more_time: !e.target.checked})
+                                    }}
             /></Col>
           </Form.Group>
           <Form.Group as={Row}>
-            <Form.Label column xs="3">Feel<span style={{color: "red"}}>*</span> <a href='#' onClick={() => setShowInfoModal('feel')}>i</a>
+            <Form.Label column xs="3">Feel<span style={{color: "red"}}>*</span> <a href='#'
+                                                                                   onClick={() => setShowInfoModal('feel')}>i</a>
             </Form.Label>
             <Col xs="9">
               <InputGroup className="w-100">
@@ -251,7 +275,11 @@ export function TrainingLogRecordModal({title, value, setValue, onSave}: Trainin
                           variant={((value?.feel !== feel) ? 'outline-' : '') + (
                             i < 1 ? 'danger' : i < 2 ? 'warning' : i < 3 ? 'secondary' : 'success'
                           )}
-                          onClick={(e) => setValue({...value, feel: (value?.feel == feel) ? undefined : feel})}
+                          onClick={(e) => setValue({
+                            ...value,
+                            feel: (value?.feel == feel) ? undefined : feel,
+                            tips: null
+                          })}
                   >{FEEL_ICONS[feel]}</Button>)}
                 {/*Button - pick custom*/}
               </InputGroup>
@@ -270,13 +298,17 @@ export function TrainingLogRecordModal({title, value, setValue, onSave}: Trainin
                             ...value,
                             harm: (value?.harm && value.harm.indexOf(harm) > -1)
                               ? value.harm.filter((h) => h !== harm)
-                              : (value?.harm || []).concat([harm])
+                              : (value?.harm || []).concat([harm]),
+                            tips: null,
                           })}
                   >{HARM_ICONS[harm]}</Button>)}
               </InputGroup>
             </Col>
           </Form.Group>
         </Form>
+        {tipsText && <>
+          <hr/>
+          <p><b>Tip:</b> {tipsText}</p></>}
       </Modal.Body>
       <Modal.Footer className='flex-grow-1 w-100'>
         <Row className="w-100">
