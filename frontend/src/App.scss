@@ -124,6 +124,11 @@ h5 span.muscleGroups {
     color: white;
   }
 
+  td.trainingDay.today.selected:after {
+    background: white;
+    opacity: 1;
+  }
+
   //td > div {
   //  &:hover {
   //    cursor: pointer;
@@ -140,6 +145,7 @@ h5 span.muscleGroups {
   .form-switch {
     padding-top: 8px;
   }
+
   button.icon {
     padding: 0;
     font-size: 1.4em;

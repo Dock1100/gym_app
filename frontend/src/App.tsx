@@ -13,6 +13,7 @@ import {tab} from "@testing-library/user-event/dist/tab";
 import {MUSCLE_GROUPS, TWeekDayName, WEEK_DAY_NAMES} from "./const";
 import {EditTrainingSchedule} from "./blocks/edit_training_schedule";
 import {
+  FEEL_ICONS,
   TrainingLogRecord,
   TrainingLogRecordModal,
   TrainingLogRecordModalProps
@@ -20,12 +21,13 @@ import {
 
 
 type StoredStateType = {
-  exercises: Exercise[],
-  activeScreen: string,
-  numberOfTrainingsPerWeek: number | null,
+  exercises: Exercise[]
+  activeScreen: string
+  numberOfTrainingsPerWeek: number | null
   trainingDays: TrainingDays
   suggestedTrainingDayNames: TWeekDayName[]
   suggestedTrainingExercises: TrainingDays
+  logs: { [date: string]: { [exerciseName: string]: (TrainingLogRecord | null)[] } }
 }
 
 const DEFAULT_STORED_STATE: StoredStateType = {
@@ -35,6 +37,7 @@ const DEFAULT_STORED_STATE: StoredStateType = {
   trainingDays: {} as TrainingDays,
   suggestedTrainingDayNames: [],
   suggestedTrainingExercises: {} as TrainingDays,
+  logs: {},
 }
 
 function getMissingWeekDaysOrderedByMidDistance(trainingDayNames: TWeekDayName[], targetDaysNum: number): TWeekDayName[] {
@@ -254,13 +257,33 @@ function App() {
     setStoredState((p) => ({...p, activeScreen}))
   }
 
-
   const [addExercisesModalShow, setAddExercisesModalShow] = useState(false);
   const [viewExerciseModalObj, setViewExerciseModalObj] = useState<Exercise | null>(null)
   const [editingTrainingLog, setEditingTrainingLog] = useState<{
     log: Partial<TrainingLogRecord>
+    dateString: string
     exerciseName: string
+    idx: number | null
   } | null>(null)
+
+  const crudLog = (log: TrainingLogRecord | null, exerciseName: string, dateString: string, index: number | null) => {
+    let allLogs = storedState.logs[dateString] || {}
+    let dayLogs = allLogs[exerciseName] || []
+    if (index != null) {
+      if (index >= dayLogs.length) {
+        for (let i = dayLogs.length; i < index; i++) {
+          dayLogs.push(null)
+        }
+      }
+      dayLogs[index] = log
+    } else {
+      dayLogs.push(log)
+    }
+    setStoredState((p) => ({
+      ...p,
+      logs: {...p.logs, [dateString]: {...allLogs, [exerciseName]: dayLogs}}
+    }))
+  }
 
 
   const muscleGroupsWithoutExercises = []
@@ -312,18 +335,28 @@ function App() {
     calendarWeeksNum += 1
   }
 
-  let calendarExercises: Exercise[] = []
+  let calendarExerciseNames: string[] = []
   let day = calendarDate.getDay()
   if (day == 0) {
     day = 7
   }
   let dayName = WEEK_DAY_NAMES[day - 1]
   if (dayName in storedState.trainingDays) {
-    calendarExercises = storedState.trainingDays[dayName].exerciseNames.map((name) => exercisesByNames[name])
+    calendarExerciseNames = [...storedState.trainingDays[dayName].exerciseNames]
   }
   if (dayName in storedState.suggestedTrainingExercises) {
-    calendarExercises = [...calendarExercises, ...storedState.suggestedTrainingExercises[dayName].exerciseNames.map((name) => exercisesByNames[name])]
+    calendarExerciseNames = [...calendarExerciseNames, ...storedState.suggestedTrainingExercises[dayName].exerciseNames]
   }
+  let calendarDateString = `${calendarDate.getFullYear()}-${calendarDate.getMonth() + 1}-${calendarDate.getDate()}`
+  if (storedState.logs[calendarDateString]) {
+    calendarExerciseNames = [
+      ...calendarExerciseNames,
+      ...Object.keys(storedState.logs[calendarDateString])
+        .filter(name => calendarExerciseNames.indexOf(name) == -1)
+    ]
+  }
+
+  let calendarExercises = calendarExerciseNames.map(name => exercises.find(ex => ex.name == name)).filter(ex => ex != null) as Exercise[]
 
   return (
     <>
@@ -337,7 +370,7 @@ function App() {
           top: 0,
           height: '48px'
         }}>
-          <Container>
+          <Container>{/*header*/}
             {activeScreen == 'exercises' && <Row>
               <Col></Col>
               <Col xs={6} className="text-center">
@@ -377,12 +410,12 @@ function App() {
                         onClick={() => setCalendarDate(new Date())}
                 >
                   {calendarDate &&
-                    (calendarDate.getDate() == new Date().getDate() && calendarDate.getFullYear() == new Date().getFullYear() ? 'Today: ': '') +
+                    (calendarDate.getDate() == new Date().getDate() && calendarDate.getFullYear() == new Date().getFullYear() ? 'Today: ' : '') +
                     calendarDate.toLocaleDateString('en-us', {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric"
-                  })}
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric"
+                    })}
                 </Button>
               </Col>
               <Col className="text-end">
@@ -400,6 +433,11 @@ function App() {
                         }}
                 >&gt;</Button>
               </Col>
+            </Row>}
+            {activeScreen == 'about' && <Row>
+              <Col></Col>
+              <Col xs={8} className="text-center">About</Col>
+              <Col className="text-end"></Col>
             </Row>}
           </Container>
         </div>
@@ -446,17 +484,11 @@ function App() {
                 </thead>
                 <tbody>
                 {(() => {
-                  /*prev month, next month, today, selected, training days*/
-                  // {WEEK_DAY_NAMES.map((day, i) => <td key={i}>{i}</td>)}
                   let rows = []
                   for (let week_i = 0; week_i < calendarWeeksNum; week_i++) {
                     let cells = []
                     for (let i = 0; i < 7; i++) {
                       let day = new Date(calendarFirstDay.getTime() + (week_i * 7 + i) * 1000 * 86400)
-                      if (day.getDate() == 1) {
-                        // debugger
-                      }
-
                       cells.push(<td key={i} className={
                         (
                           (day.getMonth() > calendarDate.getMonth() || day.getFullYear() > calendarDate.getFullYear()) ? ' next' :
@@ -464,11 +496,14 @@ function App() {
                         )
                         + (day.getDate() == calendarDate.getDate() && day.getMonth() == calendarDate.getMonth() ? ' selected' : '')
                         + (day.getDate() == new Date().getDate() ? ' today' : '')
-                        + (WEEK_DAY_NAMES[i] in storedState.trainingDays || storedState.suggestedTrainingDayNames.indexOf(WEEK_DAY_NAMES[i]) != -1 ? ' trainingDay' : '')
+                        + (
+                          (day >= new Date() && (WEEK_DAY_NAMES[i] in storedState.trainingDays || storedState.suggestedTrainingDayNames.indexOf(WEEK_DAY_NAMES[i]) != -1))
+                          || (`${day.getFullYear()}-${day.getMonth() + 1}-${day.getDate()}` in storedState.logs)
+                            ? ' trainingDay' : '')
                       }
-                                    onClick={() => {
-                                      setCalendarDate(day)
-                                    }}
+                                     onClick={() => {
+                                       setCalendarDate(day)
+                                     }}
                       >
                         <div>{day.getDate()}</div>
                       </td>)
@@ -481,7 +516,7 @@ function App() {
               </table>
             </Container>
 
-            {calendarExercises.map((exercise, i) => <Container
+            {calendarExercises.map((exercise: Exercise, i) => <Container
               className="exerciseListItem" key={i}
             >
               <Row>
@@ -496,13 +531,87 @@ function App() {
                 {exercise.secondary_muscle_groups.map((m, i) => <span className="secondary" key={m}>{m}</span>)}
               </div>
               <br/>
-              <Button onClick={() => setEditingTrainingLog({
-                log: {} as Partial<TrainingLogRecord>,
-                exerciseName: exercise.name,
-              })}>Add</Button>
-
+              <Row>
+                {(() => {
+                    let dayLog = storedState.logs[calendarDateString] || {}
+                    let savedRecs = dayLog[exercise.name] || []
+                    let recs = [...savedRecs]
+                    let maxRecs = Math.max(5, recs.length)
+                    for (let i = recs.length; i < maxRecs; i++) {
+                      recs.push(null)
+                    }
+                    let cells = []
+                    for (let i = 0; i < maxRecs; i++) {
+                      let rec: TrainingLogRecord | null = recs[i]
+                      let isPredicted = false
+                      if (rec == null && (i == 0 || recs[i - 1] != null)) {
+                        isPredicted = true
+                      }
+                      let bgColor = undefined
+                      if (rec != null) {
+                        let red = 'rgba(255,0,0,0.2)'
+                        let yellow = 'rgba(255,166,0,0.2)'
+                        let green = 'rgba(0,255,0,0.2)'
+                        if (rec.feel == 'bad' || rec.feel == 'exhausted') {
+                          bgColor = yellow
+                        }
+                        if (rec.harm.length > 0) {
+                          if (rec.harm.indexOf('burn') > -1) {
+                            if (rec.harm.length > 1) {
+                              bgColor = red
+                            } else {
+                              bgColor = green
+                            }
+                          } else {
+                            bgColor = red
+                          }
+                        }
+                        if (!bgColor && !rec.able_to_do_1_more_time) {
+                          bgColor = green
+                        }
+                      }
+                      cells.push(<Col key={i} xs="2" className="text-center" style={{padding: "3px"}}
+                                      onClick={(rec || isPredicted) ? () => setEditingTrainingLog({
+                                        log: rec || {},
+                                        exerciseName: exercise.name,
+                                        idx: i,
+                                        dateString: calendarDateString,
+                                      }) : (() => {
+                                      })}
+                      >
+                        <div style={{backgroundColor: bgColor, borderRadius: "4px"}}
+                             className={isPredicted ? 'text-muted' : ''}>
+                          {(rec || isPredicted) && <>
+                            {rec !== null ? rec.repeats : '20'}
+                            <span style={{display: 'block', lineHeight: '0.5em', fontSize: '0.6em'}}>x</span>
+                            {rec !== null ? rec.weight : '5'}<span style={{fontSize: '0.8em'}}>kg</span>
+                          </>}
+                        </div>
+                      </Col>)
+                    }
+                    cells.push(<Col xs="2" className='text-end' style={{position: 'relative'}}>
+                      <Button className='h-100'
+                              disabled={savedRecs.length == maxRecs}
+                              onClick={() => setEditingTrainingLog({
+                                log: {} as Partial<TrainingLogRecord>,
+                                exerciseName: exercise.name,
+                                idx: null,
+                                dateString: calendarDateString,
+                              })}>+</Button>
+                    </Col>)
+                    return cells
+                  }
+                )()}
+              </Row>
             </Container>)}
           </>}
+          {activeScreen == 'about' && <Container>
+            <div>logo</div>
+            <div>*protorype</div>
+            In case of any questions, suggestions or issues, please contact me at:
+            <a href="mailto:antony.pererva+gymapp@gmail.com">antony.pererva@gmail.com</a><br/>
+            {/* todo: discord */}
+          </Container>}
         </div>
         <div style={{
           background: "white",
@@ -515,11 +624,13 @@ function App() {
         }}>
           <Container className={"d-flex h-100 justify-content-around align-items-center"}>
             <Button size="sm" variant={activeScreen == 'exercises' ? "primary" : "outline-primary"}
-                    onClick={(e) => setActiveScreen('exercises')}>Exercises</Button>{' '}
+                    onClick={(e) => setActiveScreen('exercises')}>Exercises</Button>
             <Button size="sm" variant={activeScreen == 'schedule' ? "primary" : "outline-primary"}
-                    onClick={(e) => setActiveScreen('schedule')}>Schedule</Button>{' '}
+                    onClick={(e) => setActiveScreen('schedule')}>Schedule</Button>
             <Button size="sm" variant={activeScreen == 'trainings' ? "primary" : "outline-primary"}
-                    onClick={(e) => setActiveScreen('trainings')}>Trainings</Button>{' '}
+                    onClick={(e) => setActiveScreen('trainings')}>Trainings</Button>
+            <Button size="sm" variant={activeScreen == 'about' ? "primary" : "outline-primary"}
+                    onClick={(e) => setActiveScreen('about')}>i</Button>
           </Container>
         </div>
       </div>
@@ -537,8 +648,7 @@ function App() {
       <TrainingLogRecordModal
         value={editingTrainingLog != null ? editingTrainingLog.log : null}
         title={editingTrainingLog?.exerciseName}
-        setValue={(rec)=> {
-          console.log("change", rec)
+        setValue={(rec) => {
           if (rec == null) {
             setEditingTrainingLog(null)
           } else {
@@ -546,8 +656,14 @@ function App() {
             setEditingTrainingLog({...editingTrainingLog, log: rec})
           }
         }}
-        onSave={(rec)=> {}}
-     />
+        onSave={(rec) => {
+          console.log('on save', rec)
+          if (editingTrainingLog) {
+            crudLog(rec, editingTrainingLog.exerciseName, editingTrainingLog.dateString, editingTrainingLog.idx)
+          }
+          setEditingTrainingLog(null)
+        }}
+      />
     </>
   );
 }

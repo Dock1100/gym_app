@@ -46,17 +46,6 @@ is it stretching exercise under key "is_stretching".
 The text is below:
 {}"""
 
-# repeats: number
-#   weight: number
-#   able_to_do_1_more_time: boolean
-#   feel: string - too hard, energetic, exhausted
-#   harm: string[] -
-#                  joint pain, back pain,
-#                  clicks in joints,
-#                  side pain,
-#                  can't breath,
-#                  muscle pain/muscles on fire
-
 TEXT_TO_TRAINING_LOG_PROMPT_TEMPLATE = """Respond in JSON format.
 I have a text recording of my exercises session.
 Get number of repeats I have made, as number, under key "repeats";
@@ -263,33 +252,29 @@ def parse_gpt_training_log(text_to_parse: str) -> dict:
     log['repeats'] = int(log_raw['repeats'])
     log['weight'] = int(log_raw['weight'])
     log['able_to_do_more'] = log_raw['can_do_one_more_repeat']
-    log['feel'] = log_raw['feel']
-    harm = []
+    log['feel'] = log_raw['feel']  # "bad", "exhausted", "ok", "energetic"
+    harm = set()  # "no_air", "dizzy", "joint", "burn"
+    # todo: differentiate "joint_clicks" and "joint_pain",
     pain = log_raw['pain'].replace('pain', '').strip()
     if (not pain
             or (isinstance(pain, str) and pain.lower() in ('none', 'no'))
             or (isinstance(pain, list) and len(pain) == 1 and pain[0].lower() in ('none', 'no'))
     ):
         pain = None
-    if pain:
-        harm.append('pain_%s' % pain)
-    clicks_in_joints = log_raw['clicks_in_joints']
-    if clicks_in_joints:
-        harm.append('joint_clicks')
-    hard_breathing = log_raw['hard_breathing']
-    if hard_breathing:
-        harm.append('hard_breathing')
-    dizziness = log_raw['dizziness']
-    if dizziness:
-        harm.append('dizziness')
-    burning_muscles = log_raw['burning_muscles']
-    if burning_muscles:
-        harm.append('burning_muscles')
-    no_air = log_raw['no_air']
-    if no_air:
-        harm.append('no_air')
+    if pain and 'muscle' not in pain:
+        harm.add('joint')
+    if log_raw['clicks_in_joints']:
+        harm.add('joint')
+    if log_raw['hard_breathing']:
+        pass
+    if log_raw['dizziness']:
+        harm.add('dizzy')
+    if log_raw['burning_muscles']:
+        harm.add('burn')
+    if log_raw['no_air']:
+        harm.add('no_air')
 
-    log['harm'] = harm
+    log['harm'] = list(harm)
     return log
 
 
@@ -371,7 +356,7 @@ def reprocess_all_audio(request):
                 openapi_response=json.loads(json.dumps(openapi_response))
             )
             text_to_training_log.save()
-        if not text_to_training_log.training_log or not text_to_training_log.succeed_to_parse:
+        if True or not text_to_training_log.training_log or not text_to_training_log.succeed_to_parse:
             text_to_parse = text_to_training_log.openapi_response['choices'][0]['text']
             try:
                 log = parse_gpt_training_log(text_to_parse)
