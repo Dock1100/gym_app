@@ -60,6 +60,9 @@ Suggest if I was hard breathing, as boolean, under key "hard_breathing";
 Suggest if I was missing air or had suffocation, as boolean, under key "no_air";
 Suggest if I had dizziness, vertigo, giddiness, as boolean, under key "dizziness";
 
+In case "feel" is "bad" or "exhausted", or in case there is some harm - suggest tips about repeats and weight, under key "tips";
+In case "feel" is "energetic", "ok", "exhausted" and not "can_do_one_more_repeat" - suggest tips which may encourage me, under key "encourage";
+
 The text recording is noisy and with lots of misspellings, it is below:
 {}"""
 
@@ -275,22 +278,43 @@ def parse_gpt_training_log(text_to_parse: str) -> dict:
         harm.add('no_air')
 
     log['harm'] = list(harm)
+    tips = log_raw.get('tips')
+    if (not tips
+            or (isinstance(tips, str) and tips.lower() in ('none', 'no'))
+            or (isinstance(tips, list) and len(tips) == 1 and tips[0].lower() in ('none', 'no'))
+    ):
+        tips = None
+    log['tips'] = tips
+
+    encourage = log_raw.get('encourage')
+    if not tips:
+        if (not encourage
+                or (isinstance(encourage, str) and encourage.lower() in ('none', 'no'))
+                or (isinstance(encourage, list) and len(encourage) == 1 and encourage[0].lower() in ('none', 'no'))
+        ):
+            encourage = None
+        log['tips'] = encourage
     return log
 
 
 def upload_and_parse_training_log(request):
     file = request.FILES['file']
     rec_key = request.POST['rec_key']
-    try:
-        rec = TrainingLog.objects.get(key=rec_key)
-        # rec.file = file
-        # rec.save()
-    except TrainingLog.DoesNotExist:
-        rec = TrainingLog(key=rec_key)
-        rec.file = file
-        rec.save()
+    if rec_key == 'random':
+        rec =next(TrainingLog.objects.raw('''
+            select * from {0} where key is not NULL order by random() limit 1
+        '''.format(TrainingLog._meta.db_table)).iterator())
+    else:
+        try:
+            rec = TrainingLog.objects.get(key=rec_key)
+            # rec.file = file
+            # rec.save()
+        except TrainingLog.DoesNotExist:
+            rec = TrainingLog(key=rec_key)
+            rec.file = file
+            rec.save()
 
-    if not rec.transcript_json or not rec.transcript_text:
+    if not rec.transcript_json:
         print('transcribing')
         transcript = transcribe_file(rec.file)
         rec.transcript_json = transcript
@@ -340,8 +364,7 @@ def reprocess_all_audio(request):
             rec.transcript_json = transcript
             rec.transcript_text = transcript['text']
             rec.save()
-        if not rec.transcript_text:
-            continue
+
         try:
             text_to_training_log = TextToTrainingLog.objects.get(
                 transcript_text=rec.transcript_text,
