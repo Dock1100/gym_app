@@ -3,7 +3,8 @@ import {Container, Form, Modal} from "react-bootstrap";
 import axios from "axios";
 import Button from "react-bootstrap/Button";
 import {EditableExerciseBlock} from "./edit_exercise";
-import React, {useState} from "react";
+import React, {useRef, useState} from "react";
+import ReactPlayer from 'react-player/youtube';
 
 
 export type AddExercisesModalProps = {
@@ -13,28 +14,27 @@ export type AddExercisesModalProps = {
   onHide?(): void
 }
 
-export function parseYoutubeVideoId(url: string): string | null {
-  const match = url.match(/^https?:\/\/(?:(?:youtu\.be\/)|(?:(?:www\.)?youtube\.com\/(?:(?:watch\?(?:[^&]+&)?vi?=)|(?:vi?\/)|(?:shorts\/))))([a-zA-Z0-9_-]{11,})/i)
-  if (match) {
-    return match[1]
-  }
-  return null
-}
 
 export function AddExercisesModal({show, setShow, onSave}: AddExercisesModalProps) {
   let [_show, _setShow] = useState<boolean>(false);
-  let [playerState, setPlayerState] = useState<null>(null);
+  const playerRef = useRef<ReactPlayer>(null);
+  const [playerPlaying, setPlayerPlaying] = useState<boolean>(false);
   // @ts-ignore
   _setShow = setShow || _setShow;
   if (show !== undefined) {
     _show = show;
   }
+
+  if (!show && playerPlaying) {
+    setPlayerPlaying(false)
+  }
+
   const [isLoading, setIsLoading] = useState(false);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [videoUrl, setVideoUrl] = useState<string>('https://www.youtube.com/watch?v=IODxDxX7oi4');
   // const [videoUrl, setVideoUrl] = useState<string>('https://www.youtube.com/watch?v=eMjyvIQbn9M');
   // https://www.youtube.com/watch?v=eMjyvIQbn9M
-  // https://www.youtube.com/watch?v=R6gZoAzAhCg - very bad one
+  // https://www.youtube.com/watch?v=R6gZoAzAhCg - very bad one, 45 min, need logic to handle large transcription, but still doable
   // https://www.youtube.com/watch?v=IODxDxX7oi4
   const handleClose = () => _setShow(false);
   const handleSave = () => {
@@ -45,12 +45,9 @@ export function AddExercisesModal({show, setShow, onSave}: AddExercisesModalProp
     }
   }
 
-  let youtubeVideoId: string | null = null
+  let youtubeVideoUrl: string | null = null
   if (exercises.length && exercises[0].video_url) {
-    youtubeVideoId = parseYoutubeVideoId(exercises[0].video_url)
-  }
-  if (!youtubeVideoId && playerState) {
-    setPlayerState(null)
+    youtubeVideoUrl = exercises[0].video_url
   }
 
   return <Modal show={show} onHide={handleClose} fullscreen={true}>
@@ -65,7 +62,7 @@ export function AddExercisesModal({show, setShow, onSave}: AddExercisesModalProp
           console.log('videoUrl', videoUrl);
           setIsLoading(true);
           setExercises([])
-          setPlayerState(null)
+          setPlayerPlaying(false)
           axios({
             method: 'post',
             url: '/api/parse_video_by_url',
@@ -101,7 +98,6 @@ export function AddExercisesModal({show, setShow, onSave}: AddExercisesModalProp
             }).catch(() => {
             alert('failed to load, catch');
             setIsLoading(false);
-
           });
         }}>
           <Form.Group className="mb-3" controlId="exampleForm.ControlInput1">
@@ -118,18 +114,14 @@ export function AddExercisesModal({show, setShow, onSave}: AddExercisesModalProp
         </Form>
       </Container>
       <hr/>
-      {show && youtubeVideoId && <>
+      {show && youtubeVideoUrl && <>
         <div className='sticky-top' style={{
           aspectRatio: 16 / 9,
         }}>
-          <div>youtube block</div>
-          {/*<YouTube className='w-100 h-100' opts={{*/}
-          {/*  width: "100%",*/}
-          {/*  height: "100%",*/}
-          {/*}} videoId={youtubeVideoId} onReady={(e) => {*/}
-          {/*  // @ts-ignore*/}
-          {/*  setPlayerState(e.target)*/}
-          {/*}}/>*/}
+          <ReactPlayer url={youtubeVideoUrl} width="100%" height="100%" className="w-100 h-100"
+                       ref={playerRef}
+                       playing={playerPlaying}
+          />
         </div>
         <hr/>
       </>}
@@ -137,11 +129,8 @@ export function AddExercisesModal({show, setShow, onSave}: AddExercisesModalProp
         {exercises.map((exercise: any, i) =>
           <><EditableExerciseBlock value={exercise} key={i}
                                  onTimeCodeClick={(timecode: number) => {
-                                   // let p = playerState;
-                                   // if (p) {
-                                   //   p.seekTo(timecode, true)
-                                   //   p.playVideo()
-                                   // }
+                                   playerRef.current?.seekTo(timecode, 'seconds');
+                                   setPlayerPlaying(!!(playerRef.current))
                                  }}
                                  onChange={(ex) => {
                                    let exercisesCopy = [...exercises];
