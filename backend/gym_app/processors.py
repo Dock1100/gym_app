@@ -1,5 +1,6 @@
 import io
 import json
+import re
 from typing import Optional
 
 import demjson
@@ -18,25 +19,47 @@ MODEL: Optional[Whisper] = None
 
 openai.api_key = OPENAI_KEY
 
+
+# current best
+# TEXT_TO_EXERCISES_PROMPT_TEMPLATE = """Respond in JSON format.
+# For provided text list how many exercises there are.
+# What is last character location, as character number, under key "end_text_location".
+# For each exercise write:
+# exercise name under key "name";
+# short summary under key "summary";
+# location in the text where current exercise starts, as character number, under the key "exercise_text_location";
+# what are primary affected muscle groups, as list, under key "primary_muscle_groups";
+# what are secondary affected muscle groups, as list, under key "secondary_muscle_groups";
+# possible muscle groups are "neck", "chest", "shoulders", "biceps", "forearms", "abs", "thighs", "calves", "back", "triceps", "glutes", "hamstrings";
+# what you should pay attention to, things to focus on, as list, under key "attention_to";
+# what is the start position of the body, under key "start_position", along with location in the text, as character number under key "start_position_text_location";
+# what are the moves of the exercises, as list, under key "moves";
+# for each move list location in the text as a character number, under key "moves_text_locations";
+# is it pushing or pulling movement under key "movement_type".
+#
+# #The text starts here:
+# {}
+# #The text ends here."""
+
 TEXT_TO_EXERCISES_PROMPT_TEMPLATE = """Respond in JSON format.
 For provided text list how many exercises there are.
+What is last character location, as character number, under key "end_text_location".
 For each exercise write:
 exercise name under key "name";
+location in the text where current exercise starts, as character number, under the key "exercise_text_location";
 short summary under key "summary";
-location in the text where current exercise starts under the key "exercise_text_location", as a character number;
+is it pushing or pulling movement under key "movement_type";
 what are primary affected muscle groups, as list, under key "primary_muscle_groups";
 what are secondary affected muscle groups, as list, under key "secondary_muscle_groups";
 possible muscle groups are "neck", "chest", "shoulders", "biceps", "forearms", "abs", "thighs", "calves", "back", "triceps", "glutes", "hamstrings";
-what you should pay attention to, things to focus on, as list, under key "attention_to";
-what is the start position of the body, under key "start_position", along with location in the text, as character number under key "start_position_text_location";
-what are the moves of the exercises, as list, under key "moves"; 
-for each move list location in the text as a character number, under key "moves_text_locations";
-what is the required equipment if there is any, as list, under key "equipment";
-is it pushing or pulling movement under key "movement_type";
-is it stretching exercise under key "is_stretching".
+what is the start position/pose of the body, under key "start_position", along with location in the text, as character number under key "start_position_text_location";
+what are the moves of current exercise, as list, under key "moves";
+for each move list location in the text as a character number, under key "moves_text_locations".
 
-The text is below:
-{}"""
+
+#The text starts here:
+{}
+#The text ends here."""
 
 TEXT_TO_TRAINING_LOG_PROMPT_TEMPLATE = """Respond in JSON format.
 I have a text recording of my exercises session.
@@ -59,16 +82,21 @@ The text recording is noisy and with lots of misspellings, it is below:
 {}"""
 
 
-def gpt3complete(prompt):
+def gpt3complete(template, full_text):
     print('calling openai')
     completion_tokens = 1500
     max_prompt_length = 4096
     # len(prompt) = 17720; failed with error: max is 4097 tokens, however you requested 4403 tokens (4003 in your prompt; 400 for the completion)
-    if len(prompt) > max_prompt_length * 4 - completion_tokens:
-        prompt = prompt[0:max_prompt_length * 4 - completion_tokens]
-        prompt_2 = prompt[0:prompt.rfind('.') + 1]
-        if prompt_2:
-            prompt = prompt_2
+    # len(prompt) = 17968 => This model's maximum context length is 4097 tokens, however you requested 4854 tokens (3354 in your prompt; 1500 for the completion). Please reduce your prompt; or completion length.
+    # 12327; 4097 tokens, however you requested 4298 tokens (2798 in your prompt; 1500 for the completion)
+    avg_token_length = 4
+    # text = '> %s\n>' % ('\n>'.join(re.split(r'[.?!]', full_text)),)
+    text = full_text
+    if len(text) + len(template) > (max_prompt_length - completion_tokens) * avg_token_length:
+        text = text[0:round((max_prompt_length - completion_tokens) * avg_token_length - len(template))]
+        # text = text[0:max(text.rfind('.') + 1, text.rfind('>') + 1)]
+        text = text[0:max(text.rfind('.') + 1, text.rfind('!') + 1, text.rfind('?') + 1)]
+    prompt = template.format(text)
     Platformresponse = openai.Completion.create(
         engine="text-davinci-003",
         prompt=prompt,
@@ -107,15 +135,15 @@ def transcribe_file(file: File) -> dict:
     return transcript
 
 
-def extract_json(text: str, try_list=False) -> dict:
+def extract_json(text: str, as_list=False) -> dict:
     start = min(max(0, text.find('{')), max(0, text.find('}')))
     end = text.rfind('}') + 1
     if end <= 0:
         end = len(text)
     trimmed: str = text[start:end]
-    if trimmed.startswith('{') and try_list:
+    if trimmed.startswith('{') and as_list:
         trimmed = '[' + trimmed
-    if trimmed.endswith('}') and try_list:
+    if trimmed.endswith('}') and as_list:
         trimmed = trimmed + ']'
     return demjson.decode(trimmed)
 
@@ -134,6 +162,14 @@ def process_video_to_exercises(video: Video) -> TextToExercisesResult:
         video.save()
         print('\t saved')
 
+    if not video.duration_s:
+        data = pytube.YouTube(video.url)
+        video.title = data.title
+        video.duration_s = data.length
+        video.save()
+
+    # todo: grab video subtitles if possible
+
     if not video.transcript_json or not video.transcript_text:
         print('transcribing')
         transcript = transcribe_file(video.file)
@@ -147,8 +183,7 @@ def process_video_to_exercises(video: Video) -> TextToExercisesResult:
             openapi_prompt_template=TEXT_TO_EXERCISES_PROMPT_TEMPLATE
         )
     except TextToExercisesResult.DoesNotExist:
-        openapi_prompt = TEXT_TO_EXERCISES_PROMPT_TEMPLATE.format(video.transcript_text)
-        openapi_response = gpt3complete(openapi_prompt)
+        openapi_response = gpt3complete(TEXT_TO_EXERCISES_PROMPT_TEMPLATE, video.transcript_text)
         text_to_exercises = TextToExercisesResult(
             transcript_text=video.transcript_text,
             openapi_prompt_template=TEXT_TO_EXERCISES_PROMPT_TEMPLATE,
@@ -157,19 +192,22 @@ def process_video_to_exercises(video: Video) -> TextToExercisesResult:
         text_to_exercises.save()
 
     # text_to_exercises.openapi_response['choices'][0]['text']
-    if not text_to_exercises.exercises or not text_to_exercises.succeed_to_parse:
+    if True or not text_to_exercises.exercises or not text_to_exercises.succeed_to_parse:
         text_to_parse = text_to_exercises.openapi_response['choices'][0]['text']
         try:
-            exercises_raw = extract_json(text_to_parse, try_list=True)
-            if not isinstance(exercises_raw, list):
-                if 'exercises' in exercises_raw:
-                    exercises_raw = exercises_raw['exercises']
-                else:
-                    exercises_raw = [exercises_raw]
+            json_raw = extract_json(text_to_parse, as_list=True)
+            if len(json_raw) == 1:
+                json_raw = json_raw[0]
+                text_to_exercises.transcript_length_in_token = json_raw.get('end_text_location')
             else:
-                if len(exercises_raw) > 0:
-                    if 'exercises' in exercises_raw[0]:
-                        exercises_raw = exercises_raw[0]['exercises']
+                text_to_exercises.transcript_length_in_token = None  # model respond with cropped text
+            for key in json_raw.keys():
+                if isinstance(json_raw[key], list):
+                    exercises_raw = json_raw[key]
+                    break
+            else:
+                exercises_raw = json_raw
+
             exercises = []
             for exercise_raw in exercises_raw:
                 ex = {}
@@ -178,19 +216,11 @@ def process_video_to_exercises(video: Video) -> TextToExercisesResult:
                 ex['text_location'] = int(exercise_raw['exercise_text_location'])
                 ex['primary_muscle_groups'] = exercise_raw['primary_muscle_groups']
                 ex['secondary_muscle_groups'] = exercise_raw['secondary_muscle_groups']
-                ex['attention_to'] = exercise_raw['attention_to']
                 ex['movement_type'] = exercise_raw['movement_type']
-                ex['is_stretching'] = exercise_raw['is_stretching']
                 ex['start_position'] = {
                     'text': exercise_raw['start_position'],
                     'text_location': int(exercise_raw['start_position_text_location']),
                 }
-                equipment = exercise_raw['equipment']
-                if (not equipment
-                        or (isinstance(equipment, str) and equipment.lower() in ('none', 'no'))
-                ):
-                    equipment = None
-                ex['equipment'] = equipment
                 steps_raw = exercise_raw['moves']
                 steps = []
                 if steps_raw:
@@ -224,6 +254,49 @@ def process_video_to_exercises(video: Video) -> TextToExercisesResult:
         except Exception as e:
             text_to_exercises.succeed_to_parse = False
             text_to_exercises.save()
+
+    # text_position to timecode
+    if text_to_exercises.succeed_to_parse \
+            and len(text_to_exercises.exercises) > 0\
+            and text_to_exercises.exercises[-1].get('timecode') is None:
+        # transcript_length_in_token =
+        loc__time = []
+        first_char_loc = 0
+        for segment in video.transcript_json['segments']:
+            loc__time.append({
+                'char_start': first_char_loc,
+                'char_end': first_char_loc + len(segment['text']),
+                'length': len(segment['text']),
+                'time_start': segment['start'],
+                'time_end': segment['end'],
+                'duration': segment['end'] - segment['start'],
+            })
+            first_char_loc += len(segment['text'])
+
+        def get_timecode(token_location):
+            length_in_tokens = text_to_exercises.transcript_length_in_token or len(text_to_exercises.transcript_text)/4.3
+            char_location = len(text_to_exercises.transcript_text) * (
+                    token_location / length_in_tokens)
+            for loc in loc__time:
+                if loc['char_start'] <= char_location < loc['char_end']:
+                    return loc['time_start'] + (char_location - loc['char_start']) / loc['length'] * loc['duration']
+            return None
+
+        for exercise in text_to_exercises.exercises:
+            exercise['timecode'] = get_timecode(exercise['text_location'])
+            if not exercise['timecode']:
+                pass
+            ex_start_pos = exercise['start_position']
+            ex_start_pos['timecode'] = get_timecode(ex_start_pos['text_location'])
+            if not exercise['start_position']['timecode']:
+                pass
+                # raise ValueError('start_position timecode not found')
+            for step in exercise['steps']:
+                step['timecode'] = get_timecode(step['text_location'])
+                if not step['timecode']:
+                    pass
+                    # raise ValueError('step timecode not found')
+
     return text_to_exercises
 
 
@@ -289,8 +362,7 @@ def process_rec_to_training_log(rec: TrainingLog) -> TextToTrainingLog:
             openapi_prompt_template=TEXT_TO_TRAINING_LOG_PROMPT_TEMPLATE
         )
     except TextToTrainingLog.DoesNotExist:
-        openapi_prompt = TEXT_TO_TRAINING_LOG_PROMPT_TEMPLATE.format(rec.transcript_text)
-        openapi_response = gpt3complete(openapi_prompt)
+        openapi_response = gpt3complete(TEXT_TO_TRAINING_LOG_PROMPT_TEMPLATE, rec.transcript_text)
         text_to_training_log = TextToTrainingLog(
             transcript_text=rec.transcript_text,
             openapi_prompt_template=TEXT_TO_TRAINING_LOG_PROMPT_TEMPLATE,

@@ -3,9 +3,11 @@ from django.db import models
 from typing import List, Optional
 
 
-
 class Video(models.Model):
     url = models.CharField(max_length=256, unique=True, db_index=True, primary_key=True)
+    title = models.CharField(max_length=256, null=True)
+    duration_s = models.IntegerField(null=True)
+    youtube_metadata = models.JSONField(null=True)
     file = models.FileField(upload_to='videos/', null=True)
     transcript_json = models.JSONField(null=True)
     transcript_text = models.TextField(null=True)
@@ -17,6 +19,7 @@ class TextToExercisesResult(models.Model):
     openapi_response = models.JSONField()
     succeed_to_parse = models.BooleanField(null=True)
     exercises = models.JSONField(null=True)
+    transcript_length_in_token = models.IntegerField(null=True)
 
 
 class TrainingLog(models.Model):

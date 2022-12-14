@@ -1,7 +1,3 @@
-from django.http import HttpResponse
-
-import json
-
 import json
 
 from django.http import HttpResponse
@@ -24,6 +20,10 @@ def parse_video_by_url(request):
 
     return HttpResponse(json.dumps({
         'succeed_to_parse': text_to_exercises.succeed_to_parse,
+        'url': video.url,
+        'title': video.title,
+        'duration_s': video.duration_s,
+        'transcript_length': len(video.transcript_text),
         'exercises': text_to_exercises.exercises,
     }), content_type='application/json', status=200)
 
@@ -37,9 +37,12 @@ def reprocess_all_videos(request):
         t2e = process_video_to_exercises(video)
         texts_to_exercises.append({
             'url': video.url,
+            'title': video.title,
+            'duration_s': video.duration_s,
+            'transcript_length': len(video.transcript_text),
             'succeed_to_parse': t2e.succeed_to_parse,
             'exercises': t2e.exercises if t2e.succeed_to_parse else 'FAIL',
-            'openapi_response': t2e.openapi_response['choices'][0]['text'],
+            # 'openapi_response': t2e.openapi_response['choices'][0]['text'],
         })
     return HttpResponse(json.dumps(texts_to_exercises), content_type='application/json', status=200)
 

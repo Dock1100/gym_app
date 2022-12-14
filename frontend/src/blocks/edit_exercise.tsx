@@ -6,18 +6,31 @@ import {Exercise} from "../types";
 export type EditableExerciseBlockProps = {
   value?: Exercise
   onChange?(value: Exercise): void
+  onTimeCodeClick?(timeCode: number): void
 }
 
-export function EditableExerciseBlock({value, onChange}: EditableExerciseBlockProps) {
+export function secToTime(seconds: number, separator: string = ":") {
+    return [
+        Math.floor(seconds / 60 / 60),
+        Math.floor(seconds / 60 % 60),
+        Math.floor(seconds % 60)
+    ].join(separator)
+    .replace(/\b(\d)\b/g, "0$1").replace(/^00\:/,'')
+}
+
+
+export function EditableExerciseBlock({onTimeCodeClick, value, onChange}: EditableExerciseBlockProps) {
   const [_exercise, _setExercise] = React.useState<Exercise>(value || {
     name: '',
     summary: '',
+    video_url: '',
+    video_title: '',
     primary_muscle_groups: [],
     secondary_muscle_groups: [],
     attention_to: [],
     movement_type: '',
     is_stretching: false,
-    start_position: {text: ''},
+    start_position: {text: '', timecode: 0},
     steps: []
   } as Exercise);
 
@@ -37,18 +50,15 @@ export function EditableExerciseBlock({value, onChange}: EditableExerciseBlockPr
     <br/>
     <p>Summary:</p>
     <p>{exercise.summary}</p>
+    <p>Movement: {exercise.movement_type}</p>
     <p>Muscle groups:</p>
     <p>primary: {exercise.primary_muscle_groups.join(', ')}</p>
     <p>secondary: {exercise.secondary_muscle_groups.join(', ')}</p>
-    <p>Type: {exercise.is_stretching ? 'stretching' : exercise.movement_type}</p>
-    <p>Pay attention to:</p>
-    <ul>
-      {exercise.attention_to.map((item: any, i: number) => <li key={i}>{item}</li>)}
-    </ul>
     <p>Steps:</p>
     <ul>
-      <li>{exercise.start_position.text}</li>
-      {exercise.steps.map((step: any, i: number) => <li key={i}>{step.text}</li>)}
+      {exercise.steps.map((step: any, i: number) => <li key={i}>
+        {step.timecode != null && <a href='#' onClick={() => onTimeCodeClick && onTimeCodeClick(step.timecode)}>{secToTime(step.timecode)}</a>} {step.text}
+      </li>)}
     </ul>
   </Form>)
 

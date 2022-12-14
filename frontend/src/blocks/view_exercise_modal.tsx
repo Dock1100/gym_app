@@ -19,7 +19,10 @@ export function ViewExercisesModal({exercise, show, setShow}: ViewExerciseModalP
   if (show !== undefined) {
     _show = show;
   }
-  const handleClose = () => _setShow(false);
+  const handleClose = () => {
+    console.log('ViewExercisesModal handleClose')
+    _setShow(false);
+  }
 
   return <Modal show={show} onHide={handleClose} fullscreen={true}>
     <Modal.Header closeButton>
