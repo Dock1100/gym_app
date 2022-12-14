@@ -266,6 +266,8 @@ function App() {
     idx: number | null
   } | null>(null)
 
+  console.log('app render viewExerciseModalObj', viewExerciseModalObj)
+
   const crudLog = (log: TrainingLogRecord | null, exerciseName: string, dateString: string, index: number | null) => {
     let allLogs = storedState.logs[dateString] || {}
     let dayLogs = allLogs[exerciseName] || []
@@ -455,7 +457,10 @@ function App() {
             </Container>}
             {exercises.map((exercise, i) => <Container
               className="exerciseListItem" key={i}
-              onClick={(e) => setViewExerciseModalObj(exercise)}
+              onClick={(e) => {
+                console.log("exerciseListItem.click", i, exercise.name)
+                setViewExerciseModalObj(exercise)
+              }}
             >
               {exercise.name}
               <div className="muscleGroups">
@@ -642,7 +647,11 @@ function App() {
       <ViewExercisesModal show={viewExerciseModalObj != null}
         // @ts-ignore
                           exercise={viewExerciseModalObj}
-                          setShow={(show) => setViewExerciseModalObj(show ? viewExerciseModalObj : null)}
+                          setShow={(show) => {
+                            let newObj = show ? viewExerciseModalObj : null
+                            console.log('app.ViewExercisesModal.setShow', show, viewExerciseModalObj, newObj)
+                            setViewExerciseModalObj(newObj)
+                          }}
       />
 
       <TrainingLogRecordModal
