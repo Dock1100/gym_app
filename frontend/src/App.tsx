@@ -6,7 +6,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import {Col, Container, Form, InputGroup, Modal, Nav, Navbar, NavDropdown, Row, Stack, Table} from "react-bootstrap";
 import axios from "axios";
 import {EditableExerciseBlock} from "./blocks/edit_exercise";
-import {Exercise, TrainingDays} from "./types";
+import {Exercise, TrainingDays, WithIsEnabled} from "./types";
 import {AddExercisesModal} from "./blocks/add_exercises_modal";
 import {ViewExercisesModal} from "./blocks/view_exercise_modal";
 import {tab} from "@testing-library/user-event/dist/tab";
@@ -18,10 +18,11 @@ import {
   TrainingLogRecordModal,
   TrainingLogRecordModalProps
 } from "./blocks/trainingLogRecordModal";
+import {ExercisesListTips} from "./blocks/exercisesListTips";
 
 
 type StoredStateType = {
-  exercises: Exercise[]
+  exercises: WithIsEnabled<Exercise>[]
   activeScreen: string
   numberOfTrainingsPerWeek: number | null
   trainingDays: TrainingDays
@@ -133,39 +134,57 @@ function deleteExcessDays(trainingDays: TrainingDays, targetDaysNum: number, exc
   return newTrainingDays
 }
 
-function suggestMissingExercises(trainingDays: TrainingDays, suggestedTrainingDayNames: TWeekDayName[], exercises: Exercise[]): TrainingDays {
+function suggestMissingExercises(trainingDays: TrainingDays, suggestedTrainingDayNames: TWeekDayName[], exercises: WithIsEnabled<Exercise>[]): TrainingDays {
   // todo: implement
   let suggestedTrainingExercises = {} as TrainingDays
   let notUsedExerciseNames = []
-  for (let e of exercises) {
-    let is_missing = true
-    for (let d of Object.keys(trainingDays) as TWeekDayName[]) {
-      if (trainingDays[d].exerciseNames.indexOf(e.name) != -1) {
-        is_missing = false
-        break
-      }
-    }
-    if (is_missing) {
+  let activeExercises = exercises.filter(e => e.isEnabled)
+  for (let e of activeExercises) {
+    // let is_missing = true
+    // for (let d of Object.keys(trainingDays) as TWeekDayName[]) {
+    //   if (trainingDays[d].exerciseNames.indexOf(e.name) != -1) {
+    //     is_missing = false
+    //     break
+    //   }
+    // }
+    // if (is_missing) {
       notUsedExerciseNames.push(e.name)
-    }
+    // }
   }
-  for (let d of Object.keys(trainingDays) as TWeekDayName[]) {
-    if (trainingDays[d].exerciseNames.length == 0 && notUsedExerciseNames.length > 0) {
-      suggestedTrainingExercises[d] = {
-        exerciseNames: [
-          //@ts-ignore
-          notUsedExerciseNames.pop()
-        ]
-      }
+  // for (let d of Object.keys(trainingDays) as TWeekDayName[]) {
+  //   if (trainingDays[d].exerciseNames.length == 0 && notUsedExerciseNames.length > 0) {
+  //     suggestedTrainingExercises[d] = {
+  //       exerciseNames: [
+  //         //@ts-ignore
+  //         notUsedExerciseNames.pop()
+  //       ]
+  //     }
+  //   }
+  // }
+
+  let aggTrainDayNames: TWeekDayName[] = []
+  for (let day of WEEK_DAY_NAMES) {
+    if (day in trainingDays) {
+      aggTrainDayNames.push(day)
+    } else if (suggestedTrainingDayNames.indexOf(day) != -1) {
+      aggTrainDayNames.push(day)
     }
   }
 
-  for (let d of suggestedTrainingDayNames) {
+  let exercisesPerDay = Math.max(1, Math.floor(notUsedExerciseNames.length / aggTrainDayNames.length))
+  let firstDayExs = exercisesPerDay + (notUsedExerciseNames.length - aggTrainDayNames.length*exercisesPerDay)
+
+  for (let i=0;i<aggTrainDayNames.length;i++) {
+    let d = aggTrainDayNames[i]
+    let num = exercisesPerDay
+    if (i==0) {
+        num = firstDayExs
+    }
     if (notUsedExerciseNames.length > 0) {
       suggestedTrainingExercises[d] = {
         exerciseNames: [
           //@ts-ignore
-          notUsedExerciseNames.pop()
+          ...notUsedExerciseNames.splice(0, num)
         ]
       }
     }
@@ -184,6 +203,11 @@ function App() {
             if (!(key in parsedState)) {
               // @ts-ignore
               parsedState[key] = DEFAULT_STORED_STATE[key]
+            }
+          }
+          for (let ex of parsedState.exercises) {
+            if (ex.isEnabled === undefined) {
+              ex.isEnabled = true
             }
           }
           console.log('loaded storedState', parsedState)
@@ -207,8 +231,10 @@ function App() {
   for (let e of exercises) {
     exercisesByNames[e.name] = e
   }
-  const setExercises: Dispatch<SetStateAction<Exercise[]>> = (ep) => {
+  const setExercises: Dispatch<SetStateAction<WithIsEnabled<Exercise>[]>> = (ep) => {
     setStoredState((p) => {
+      console.log()
+      setNumberOfTrainingsPerWeek(p.numberOfTrainingsPerWeek, true)
       if (!!ep && 'function' === typeof ep) {
         return {
           ...p,
@@ -218,14 +244,14 @@ function App() {
       return {...p, exercises: ep}
     })
   }
-  const setNumberOfTrainingsPerWeek = (n: number | null) => {
+  const setNumberOfTrainingsPerWeek = (n: number | null, forceRecal: boolean = false) => {
     setStoredState((p) => {
       let {trainingDays, suggestedTrainingDayNames, suggestedTrainingExercises} = p
       if (n == null) {
         trainingDays = {} as TrainingDays
         suggestedTrainingDayNames = []
         suggestedTrainingExercises = {} as TrainingDays
-      } else if (n != p.numberOfTrainingsPerWeek) {
+      } else if (n != p.numberOfTrainingsPerWeek || forceRecal) {
         trainingDays = deleteExcessDays(trainingDays, n)
         suggestedTrainingDayNames = suggestMissingDayNames(Object.keys(trainingDays) as TWeekDayName[], n)
         suggestedTrainingExercises = suggestMissingExercises(trainingDays, suggestedTrainingDayNames, exercises)
@@ -287,26 +313,6 @@ function App() {
     }))
   }
 
-
-  const muscleGroupsWithoutExercises = []
-
-  for (let group of MUSCLE_GROUPS) {
-    let has_ex = false
-    for (let ex of exercises) {
-      for (let ex_g of ex.primary_muscle_groups) {
-        if (ex_g.toLowerCase().includes(group.toLowerCase())) {
-          has_ex = true;
-          break;
-        }
-      }
-      if (has_ex) {
-        break
-      }
-    }
-    if (!has_ex) {
-      muscleGroupsWithoutExercises.push(group)
-    }
-  }
 
   if (activeScreen == 'calendar' && calendarDate == null) {
     setCalendarDate(new Date())
@@ -374,7 +380,14 @@ function App() {
         }}>
           <Container>{/*header*/}
             {activeScreen == 'exercises' && <Row>
-              <Col></Col>
+              <Col>
+                <Button variant="outline-primary"
+                        onClick={(e) => {
+                          setExercises(exercises.map(ex => ({...ex, isEnabled: false})))
+                        }}
+                        size="sm"
+                >Reset</Button>
+              </Col>
               <Col xs={6} className="text-center">
                 My exercises
               </Col>
@@ -445,28 +458,31 @@ function App() {
         </div>
         <div style={{overflow: "scroll", height: "100%", padding: '12px 0'}}>
           {activeScreen == 'exercises' && <>
-            {!exercises.length && <div className="h-100 w-100 d-flex align-items-center justify-content-center">
-              <p className="text-muted">You don't have any, add some!</p>
-            </div>}
-            {!!exercises.length && muscleGroupsWithoutExercises.length > 0 && <Container className="text-center">
-              <div className="text-muted">You should add also exercises for those muscle groups:</div>
-              <div className="muscleGroups">
-                {muscleGroupsWithoutExercises.map((m, i) => <span className="missing" key={m}>{m}</span>)}
-              </div>
-              <br/>
-            </Container>}
+            <ExercisesListTips exercises={exercises} setExercises={setExercises} />
+
             {exercises.map((exercise, i) => <Container
               className="exerciseListItem" key={i}
-              onClick={(e) => {
-                console.log("exerciseListItem.click", i, exercise.name)
-                setViewExerciseModalObj(exercise)
-              }}
             >
-              {exercise.name}
-              <div className="muscleGroups">
-                {exercise.primary_muscle_groups.map((m, i) => <span className="primary" key={m}>{m}</span>)}
-                {exercise.secondary_muscle_groups.map((m, i) => <span className="secondary" key={m}>{m}</span>)}
-              </div>
+              <Row className="align-items-center" style={{opacity: exercise.isEnabled ? 1 : 0.6}}>
+                <Col xs="1" className="h-100">
+                  <input type={"checkbox"} checked={exercise.isEnabled} onChange={(e) => {
+                    let newExercises = [...exercises]
+                    newExercises[i].isEnabled = e.target.checked
+                    setExercises(newExercises)
+                  }}/>
+                </Col>
+                <Col xs="11" onClick={(e) => {
+                  console.log("exerciseListItem.click", i, exercise.name)
+                  setViewExerciseModalObj(exercise)
+                }}>
+                  {exercise.name}
+                  <div className="muscleGroups">
+                    {exercise.primary_muscle_groups.map((m, i) => <span className="primary" key={m}>{m}</span>)}
+                    {exercise.secondary_muscle_groups.map((m, i) => <span className="secondary" key={m}>{m}</span>)}
+                  </div>
+                </Col>
+              </Row>
+
             </Container>)}
           </>}
           {activeScreen == 'schedule' && <EditTrainingSchedule
@@ -642,7 +658,10 @@ function App() {
 
       <AddExercisesModal show={addExercisesModalShow}
                          setShow={setAddExercisesModalShow}
-                         onSave={(exs) => setExercises((prev) => ([...prev, ...exs]))}
+                         onSave={(exs) => setExercises((prev) => (
+                           [...prev, ...exs.map((e) => ({...e, isEnabled: true}))]
+                         ))}
+                         uncheckExerciseNamesLC={exercises.map((e) => e.name.toLowerCase())}
       />
       <ViewExercisesModal show={viewExerciseModalObj != null}
         // @ts-ignore

@@ -4,6 +4,8 @@ import {Exercise} from "../types";
 
 
 export type EditableExerciseBlockProps = {
+  checkbox?: boolean
+  setCheckbox?(value: boolean): void
   value?: Exercise
   onChange?(value: Exercise): void
   onTimeCodeClick?(timeCode: number): void
@@ -19,7 +21,7 @@ export function secToTime(seconds: number, separator: string = ":") {
 }
 
 
-export function EditableExerciseBlock({onTimeCodeClick, value, onChange}: EditableExerciseBlockProps) {
+export function EditableExerciseBlock({checkbox, setCheckbox, onTimeCodeClick, value, onChange}: EditableExerciseBlockProps) {
   const [_exercise, _setExercise] = React.useState<Exercise>(value || {
     name: '',
     summary: '',
@@ -42,10 +44,15 @@ export function EditableExerciseBlock({onTimeCodeClick, value, onChange}: Editab
     _onChange({...exercise, [e.target.name]: e.target.value});
   }
 
-  return (<Form>
-    <Form.Group as={Row}>
+  return (<Form style={{opacity: checkbox==false ? 0.7 : 1}}>
+    <Form.Group as={Row} className='align-items-center'>
+      {checkbox!==undefined && <Col xs="1">
+        <input type="checkbox" checked={checkbox}
+               onChange={(e) => setCheckbox && setCheckbox(e.target.checked)}
+        />
+      </Col>}
       <Form.Label column xs="3">Name</Form.Label>
-      <Col xs="9"><Form.Control type="text" name="name" value={exercise.name} onChange={changeHandler}/></Col>
+      <Col xs={checkbox!==undefined ? '8' : '9'}><Form.Control type="text" name="name" value={exercise.name} onChange={changeHandler}/></Col>
     </Form.Group>
     <br/>
     <p>Summary:</p>

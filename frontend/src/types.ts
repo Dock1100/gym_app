@@ -1,5 +1,7 @@
 import {TWeekDayName} from "./const";
 
+export type WithIsEnabled<T> = T & { isEnabled: boolean }
+
 export type Exercise = {
   video_url: string;
   video_title: string;

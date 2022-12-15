@@ -1,4 +1,4 @@
-import {Exercise} from "../types";
+import {Exercise, WithIsEnabled} from "../types";
 import {Container, Form, Modal} from "react-bootstrap";
 import axios from "axios";
 import Button from "react-bootstrap/Button";
@@ -12,10 +12,11 @@ export type AddExercisesModalProps = {
   setShow?(show: boolean): void
   onSave?(exercises: Exercise[]): void
   onHide?(): void
+  uncheckExerciseNamesLC: string[]
 }
 
 
-export function AddExercisesModal({show, setShow, onSave}: AddExercisesModalProps) {
+export function AddExercisesModal({uncheckExerciseNamesLC, show, setShow, onSave}: AddExercisesModalProps) {
   let [_show, _setShow] = useState<boolean>(false);
   const playerRef = useRef<ReactPlayer>(null);
   const [playerPlaying, setPlayerPlaying] = useState<boolean>(false);
@@ -30,18 +31,22 @@ export function AddExercisesModal({show, setShow, onSave}: AddExercisesModalProp
   }
 
   const [isLoading, setIsLoading] = useState(false);
-  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [exercises, setExercises] = useState<WithIsEnabled<Exercise>[]>([]);
   const [videoUrl, setVideoUrl] = useState<string>('https://www.youtube.com/watch?v=IODxDxX7oi4');
   // const [videoUrl, setVideoUrl] = useState<string>('https://www.youtube.com/watch?v=eMjyvIQbn9M');
   // https://www.youtube.com/watch?v=eMjyvIQbn9M
   // https://www.youtube.com/watch?v=R6gZoAzAhCg - very bad one, 45 min, need logic to handle large transcription, but still doable
   // https://www.youtube.com/watch?v=IODxDxX7oi4
-  const handleClose = () => _setShow(false);
+  const handleClose = () => {
+    _setShow(false);
+    setExercises([]);
+    // setVideoUrl('');
+  }
   const handleSave = () => {
     handleClose();
     setExercises([]);
     if (onSave) {
-      onSave(exercises);
+      onSave(exercises.filter(e => e.isEnabled));
     }
   }
 
@@ -73,9 +78,10 @@ export function AddExercisesModal({show, setShow, onSave}: AddExercisesModalProp
               setIsLoading(false);
               if (response.statusText == 'OK' && response.data.succeed_to_parse) {
                 console.log('exercises', response.data.exercises);
-                let exercises: Exercise[] = []
+                let exercises: WithIsEnabled<Exercise>[] = []
                 for (let exRaw of response.data.exercises) {
                   exercises.push({
+                    isEnabled: uncheckExerciseNamesLC.indexOf(exRaw.name.toLowerCase()) == -1,
                     name: exRaw.name,
                     summary: exRaw.summary,
                     video_url: response.data.url,
@@ -127,16 +133,25 @@ export function AddExercisesModal({show, setShow, onSave}: AddExercisesModalProp
       </>}
       <Container>
         {exercises.map((exercise: any, i) =>
-          <><EditableExerciseBlock value={exercise} key={i}
-                                 onTimeCodeClick={(timecode: number) => {
-                                   playerRef.current?.seekTo(timecode, 'seconds');
-                                   setPlayerPlaying(!!(playerRef.current))
-                                 }}
-                                 onChange={(ex) => {
-                                   let exercisesCopy = [...exercises];
-                                   exercisesCopy[i] = ex;
-                                   setExercises(exercisesCopy)
-                                 }}/><hr/></>)}
+          <>
+            <EditableExerciseBlock value={exercise} key={i}
+                                   checkbox={exercise.isEnabled}
+                                   setCheckbox={(checked) => {
+                                     let exercisesCopy = [...exercises];
+                                     exercisesCopy[i] = {...exercisesCopy[i], isEnabled: checked};
+                                     setExercises(exercisesCopy)
+                                   }}
+                                   onTimeCodeClick={(timecode: number) => {
+                                     playerRef.current?.seekTo(timecode, 'seconds');
+                                     setPlayerPlaying(!!(playerRef.current))
+                                   }}
+                                   onChange={(ex) => {
+                                     let exercisesCopy = [...exercises];
+                                     exercisesCopy[i] = {...exercisesCopy[i], ...ex};
+                                     setExercises(exercisesCopy)
+                                   }}/>
+            <hr/>
+          </>)}
       </Container>
     </Modal.Body>
     <Modal.Footer>
