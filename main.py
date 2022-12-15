@@ -8,7 +8,7 @@ import json
 import hashlib
 
 
-OPEN_AI_API_KEY = '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'
+OPEN_AI_API_KEY = '...'
 openai.api_key = OPEN_AI_API_KEY
 
 
