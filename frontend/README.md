@@ -1,3 +1,5 @@
+logo by <a href="https://www.freepik.com/free-vector/cartoon-avocado-characters-exercising-gym-illustration_16368991.htm">Image by pch.vector</a> on Freepik
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).

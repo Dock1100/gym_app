@@ -20,8 +20,11 @@ import {
 } from "./blocks/trainingLogRecordModal";
 import {ExercisesListTips} from "./blocks/exercisesListTips";
 
+import logoMain from './logo1.png';
+import logoTrainingDone from './logo2.png';
 
 type StoredStateType = {
+  userEmail: string
   exercises: WithIsEnabled<Exercise>[]
   activeScreen: string
   numberOfTrainingsPerWeek: number | null
@@ -32,8 +35,9 @@ type StoredStateType = {
 }
 
 const DEFAULT_STORED_STATE: StoredStateType = {
+  userEmail: '',
   exercises: [],
-  activeScreen: 'schedule',
+  activeScreen: 'exercises',
   numberOfTrainingsPerWeek: null,
   trainingDays: {} as TrainingDays,
   suggestedTrainingDayNames: [],
@@ -148,7 +152,7 @@ function suggestMissingExercises(trainingDays: TrainingDays, suggestedTrainingDa
     //   }
     // }
     // if (is_missing) {
-      notUsedExerciseNames.push(e.name)
+    notUsedExerciseNames.push(e.name)
     // }
   }
   // for (let d of Object.keys(trainingDays) as TWeekDayName[]) {
@@ -172,13 +176,13 @@ function suggestMissingExercises(trainingDays: TrainingDays, suggestedTrainingDa
   }
 
   let exercisesPerDay = Math.max(1, Math.floor(notUsedExerciseNames.length / aggTrainDayNames.length))
-  let firstDayExs = exercisesPerDay + (notUsedExerciseNames.length - aggTrainDayNames.length*exercisesPerDay)
+  let firstDayExs = exercisesPerDay + (notUsedExerciseNames.length - aggTrainDayNames.length * exercisesPerDay)
 
-  for (let i=0;i<aggTrainDayNames.length;i++) {
+  for (let i = 0; i < aggTrainDayNames.length; i++) {
     let d = aggTrainDayNames[i]
     let num = exercisesPerDay
-    if (i==0) {
-        num = firstDayExs
+    if (i == 0) {
+      num = firstDayExs
     }
     if (notUsedExerciseNames.length > 0) {
       suggestedTrainingExercises[d] = {
@@ -193,6 +197,7 @@ function suggestMissingExercises(trainingDays: TrainingDays, suggestedTrainingDa
 }
 
 function App() {
+  const [showTrainingDoneModal, setShowTrainingDoneModal] = useState<boolean>(true)
   const [storedState, setStoredState] = useState<StoredStateType>(() => {
       let savedState = localStorage.getItem('storedState')
       try {
@@ -315,12 +320,15 @@ function App() {
 
 
   if (activeScreen == 'calendar' && calendarDate == null) {
-    setCalendarDate(new Date())
+    console.log(1)
+    setCalendarDate(new Date(new Date().getTime() + 1000 * 60 * 60 * 24))
     return <></>
   }
 
   if (!calendarDate) {
-    calendarDate = new Date()
+    console.log(2)
+    calendarDate = new Date(new Date().getTime() + 1000 * 60 * 60 * 24)
+    console.log(calendarDate)
   }
   let calendarFirstDay = calendarDate
   calendarFirstDay = new Date(calendarFirstDay.getFullYear(), calendarFirstDay.getMonth(), 1)
@@ -368,331 +376,437 @@ function App() {
 
   return (
     <>
-      <div style={{padding: '48px 0', height: "100%"}}>
-        <div className='navigationHeader' style={{
-          background: "white",
-          lineHeight: '48px',
-          boxShadow: "0 0px 10px rgba(0,0,0,0.3)",
-          position: 'fixed',
-          width: '100%',
-          top: 0,
-          height: '48px'
-        }}>
-          <Container>{/*header*/}
-            {activeScreen == 'exercises' && <Row>
-              <Col>
-                <Button variant="outline-primary"
-                        onClick={(e) => {
-                          setExercises(exercises.map(ex => ({...ex, isEnabled: false})))
-                        }}
-                        size="sm"
-                >Reset</Button>
-              </Col>
-              <Col xs={6} className="text-center">
-                My exercises
-              </Col>
-              <Col className="text-end">
-                <Button variant="outline-primary"
-                        onClick={(e) => setAddExercisesModalShow(true)}
-                        size="sm"
-                >Add</Button>
-              </Col>
-            </Row>}
-            {activeScreen == 'schedule' && <Row>
-              <Col></Col>
-              <Col xs={6} className="text-center">
-                Training schedule
-              </Col>
-              <Col className="text-end">
-              </Col>
-            </Row>}
-            {activeScreen == 'trainings' && <Row>
-              <Col><Button variant="outline-primary" size="sm"
-                           onClick={() => {
-                             let current = new Date(calendarDate || new Date())
-                             let daysPrevMonth = new Date(current.getFullYear(), current.getMonth(), 0).getDate()
-                             let prevDate = new Date(current)
-                             if (daysPrevMonth < current.getDate()) {
-                               prevDate = new Date(current.getFullYear(), current.getMonth(), 0)
-                             } else {
-                               prevDate.setMonth(current.getMonth() - 1)
-                             }
-                             setCalendarDate(prevDate)
-                           }}
-              >&lt;</Button></Col>
-              <Col xs={8} className="text-center">
-                <Button variant="outline-primary" size="sm"
-                        onClick={() => setCalendarDate(new Date())}
-                >
-                  {calendarDate &&
-                    (calendarDate.getDate() == new Date().getDate() && calendarDate.getFullYear() == new Date().getFullYear() ? 'Today: ' : '') +
-                    calendarDate.toLocaleDateString('en-us', {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric"
-                    })}
-                </Button>
-              </Col>
-              <Col className="text-end">
-                <Button variant="outline-primary" size="sm"
-                        onClick={() => {
-                          let current = new Date(calendarDate || new Date())
-                          let daysNextMonth = new Date(current.getFullYear(), current.getMonth() + 2, 0).getDate()
-                          let nextDate = new Date(current)
-                          if (daysNextMonth < current.getDate()) {
-                            nextDate = new Date(current.getFullYear(), current.getMonth() + 1, 1)
-                          } else {
-                            nextDate.setMonth(current.getMonth() + 1)
-                          }
-                          setCalendarDate(nextDate)
-                        }}
-                >&gt;</Button>
-              </Col>
-            </Row>}
-            {activeScreen == 'about' && <Row>
-              <Col></Col>
-              <Col xs={8} className="text-center">About</Col>
-              <Col className="text-end"></Col>
-            </Row>}
-          </Container>
-        </div>
-        <div style={{overflow: "scroll", height: "100%", padding: '12px 0'}}>
-          {activeScreen == 'exercises' && <>
-            <ExercisesListTips exercises={exercises} setExercises={setExercises} />
-
-            {exercises.map((exercise, i) => <Container
-              className="exerciseListItem" key={i}
-            >
-              <Row className="align-items-center" style={{opacity: exercise.isEnabled ? 1 : 0.6}}>
-                <Col xs="1" className="h-100">
-                  <input type={"checkbox"} checked={exercise.isEnabled} onChange={(e) => {
-                    let newExercises = [...exercises]
-                    newExercises[i].isEnabled = e.target.checked
-                    setExercises(newExercises)
-                  }}/>
-                </Col>
-                <Col xs="11" onClick={(e) => {
-                  console.log("exerciseListItem.click", i, exercise.name)
-                  setViewExerciseModalObj(exercise)
-                }}>
-                  {exercise.name}
-                  <div className="muscleGroups">
-                    {exercise.primary_muscle_groups.map((m, i) => <span className="primary" key={m}>{m}</span>)}
-                    {exercise.secondary_muscle_groups.map((m, i) => <span className="secondary" key={m}>{m}</span>)}
-                  </div>
-                </Col>
-              </Row>
-
-            </Container>)}
-          </>}
-          {activeScreen == 'schedule' && <EditTrainingSchedule
-            numberOfTrainingsPerWeek={storedState.numberOfTrainingsPerWeek}
-            setNumberOfTrainingsPerWeek={setNumberOfTrainingsPerWeek}
-            suggestedTrainingDayNames={storedState.suggestedTrainingDayNames}
-            trainingDays={storedState.trainingDays}
-            onTrainingDayMarkerChange={onTrainingDayMarkerChange}
-            suggestedTrainingExercises={storedState.suggestedTrainingExercises}
-            setViewExerciseModalObj={setViewExerciseModalObj}
-            exercisesByNames={exercisesByNames}
-          />}
-          {activeScreen == 'trainings' && <>
-            <Container>
-              <table className={'trainingsTable'}>
-                <thead>
-                <tr>
-                  {WEEK_DAY_NAMES.map((day, i) => <th key={i}>{day[0]}</th>)}
-                </tr>
-                </thead>
-                <tbody>
-                {(() => {
-                  let rows = []
-                  for (let week_i = 0; week_i < calendarWeeksNum; week_i++) {
-                    let cells = []
-                    for (let i = 0; i < 7; i++) {
-                      let day = new Date(calendarFirstDay.getTime() + (week_i * 7 + i) * 1000 * 86400)
-                      cells.push(<td key={i} className={
-                        (
-                          (day.getMonth() > calendarDate.getMonth() || day.getFullYear() > calendarDate.getFullYear()) ? ' next' :
-                            (day.getFullYear() < calendarDate.getFullYear() || day.getMonth() < calendarDate.getMonth()) ? ' prev' : ''
-                        )
-                        + (day.getDate() == calendarDate.getDate() && day.getMonth() == calendarDate.getMonth() ? ' selected' : '')
-                        + (day.getDate() == new Date().getDate() ? ' today' : '')
-                        + (
-                          (day >= new Date() && (WEEK_DAY_NAMES[i] in storedState.trainingDays || storedState.suggestedTrainingDayNames.indexOf(WEEK_DAY_NAMES[i]) != -1))
-                          || (`${day.getFullYear()}-${day.getMonth() + 1}-${day.getDate()}` in storedState.logs)
-                            ? ' trainingDay' : '')
-                      }
-                                     onClick={() => {
-                                       setCalendarDate(day)
-                                     }}
-                      >
-                        <div>{day.getDate()}</div>
-                      </td>)
-                    }
-                    rows.push(<tr key={week_i}>{cells}</tr>)
-                  }
-                  return rows
-                })()}
-                </tbody>
-              </table>
-            </Container>
-
-            {calendarExercises.map((exercise: Exercise, i) => <Container
-              className="exerciseListItem" key={i}
-            >
-              <Row>
-                <Col>{exercise.name}</Col>
-                <Col className="text-end">
-                  <Button size="sm" variant="link" style={{position: 'relative', top: '-2px'}}
-                          onClick={(e) => setViewExerciseModalObj(exercise)}>info</Button>
-                </Col>
-              </Row>
-              <div className="muscleGroups">
-                {exercise.primary_muscle_groups.map((m, i) => <span className="primary" key={m}>{m}</span>)}
-                {exercise.secondary_muscle_groups.map((m, i) => <span className="secondary" key={m}>{m}</span>)}
+      {storedState.userEmail &&
+        <Modal show={!storedState.userEmail} onHide={() =>
+          setStoredState((p) => ({...p, userEmail: 'abc'}))}
+               fullscreen={true}
+               backdrop="static"
+               keyboard={false}
+               centered
+               className={"training-log-record-modal"}
+        >
+          <Modal.Header style={{
+            border: 'unset',
+          }}>
+            <Modal.Title></Modal.Title>
+          </Modal.Header>
+          <Modal.Body style={{
+            position: 'relative',
+          }}>
+            <div className='text-center w-100 h-75' style={{position: 'relative'}}>
+              <div style={{
+                fontSize: '3em',
+              }}>
+                Avocado
               </div>
-              <br/>
-              <Row>
-                {(() => {
-                    let dayLog = storedState.logs[calendarDateString] || {}
-                    let savedRecs = dayLog[exercise.name] || []
-                    let recs = [...savedRecs]
-                    let maxRecs = Math.max(5, recs.length)
-                    for (let i = recs.length; i < maxRecs; i++) {
-                      recs.push(null)
-                    }
-                    let cells = []
-                    for (let i = 0; i < maxRecs; i++) {
-                      let rec: TrainingLogRecord | null = recs[i]
-                      let isPredicted = false
-                      if (rec == null && (i == 0 || recs[i - 1] != null)) {
-                        isPredicted = true
-                      }
-                      let bgColor = undefined
-                      if (rec != null) {
-                        let red = 'rgba(255,0,0,0.2)'
-                        let yellow = 'rgba(255,166,0,0.2)'
-                        let green = 'rgba(0,255,0,0.2)'
-                        if (rec.feel == 'bad' || rec.feel == 'exhausted') {
-                          bgColor = yellow
-                        }
-                        if (rec.harm.length > 0) {
-                          if (rec.harm.indexOf('burn') > -1) {
-                            if (rec.harm.length > 1) {
-                              bgColor = red
+              <div className="text-center text-muted">
+                your pocket trainer
+              </div>
+              <img src={logoMain} style={{
+                maxWidth: '100%',
+                width: 'auto',
+                height: 'auto',
+                maxHeight: '100%',
+              }}/>
+            </div>
+            <div className='w-100' style={{
+              'position': 'absolute',
+              bottom: '16px',
+              left: 0,
+              padding: '16px',
+              backgroundColor: 'rgba(255,255,255,0.7)',
+              borderRadius: '8px',
+            }}>
+              <Form className='text-center' onSubmit={(e) => {
+                e.preventDefault()
+                console.log("submit")
+              }}>
+                <Form.Group controlId="formBasicEmail" style={{
+                  paddingBottom: '8px',
+                }}>
+                    <Form.Control type="email" placeholder="Enter email" required />
+                </Form.Group>
+                <div>
+                <Form.Check className='d-inline-block' type="checkbox" label='Track updates' id='abc'/>
+                </div>
+                <div style={{paddingTop:'8px'}}>
+                <Button type='submit'>Let's go</Button>
+                  </div>
+              </Form>
+            </div>
+
+          </Modal.Body>
+        </Modal>}
+      {!storedState.userEmail && <>
+        <div style={{padding: '48px 0', height: "100%"}}>
+          <div className='navigationHeader' style={{
+            background: "white",
+            lineHeight: '48px',
+            boxShadow: "0 0px 10px rgba(0,0,0,0.3)",
+            position: 'fixed',
+            width: '100%',
+            top: 0,
+            height: '48px'
+          }}>
+            <Container>{/*header*/}
+              {activeScreen == 'exercises' && <Row>
+                <Col>
+                  <Button variant="outline-primary"
+                          onClick={(e) => {
+                            setExercises(exercises.map(ex => ({...ex, isEnabled: false})))
+                          }}
+                          size="sm"
+                  >Reset</Button>
+                </Col>
+                <Col xs={6} className="text-center">
+                  My exercises
+                </Col>
+                <Col className="text-end">
+                  <Button variant="outline-primary"
+                          onClick={(e) => setAddExercisesModalShow(true)}
+                          size="sm"
+                  >Add</Button>
+                </Col>
+              </Row>}
+              {activeScreen == 'schedule' && <Row>
+                <Col></Col>
+                <Col xs={6} className="text-center">
+                  Training schedule
+                </Col>
+                <Col className="text-end">
+                </Col>
+              </Row>}
+              {activeScreen == 'trainings' && <Row>
+                <Col><Button variant="outline-primary" size="sm"
+                             onClick={() => {
+                               let current = new Date(calendarDate || new Date())
+                               let daysPrevMonth = new Date(current.getFullYear(), current.getMonth(), 0).getDate()
+                               let prevDate = new Date(current)
+                               if (daysPrevMonth < current.getDate()) {
+                                 prevDate = new Date(current.getFullYear(), current.getMonth(), 0)
+                               } else {
+                                 prevDate.setMonth(current.getMonth() - 1)
+                               }
+                               setCalendarDate(prevDate)
+                             }}
+                >&lt;</Button></Col>
+                <Col xs={8} className="text-center">
+                  <Button variant="outline-primary" size="sm"
+                          onClick={() => setCalendarDate(new Date())}
+                  >
+                    {calendarDate &&
+                      (calendarDate.getDate() == new Date().getDate() && calendarDate.getFullYear() == new Date().getFullYear() ? 'Today: ' : '') +
+                      calendarDate.toLocaleDateString('en-us', {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric"
+                      })}
+                  </Button>
+                </Col>
+                <Col className="text-end">
+                  <Button variant="outline-primary" size="sm"
+                          onClick={() => {
+                            let current = new Date(calendarDate || new Date())
+                            let daysNextMonth = new Date(current.getFullYear(), current.getMonth() + 2, 0).getDate()
+                            let nextDate = new Date(current)
+                            if (daysNextMonth < current.getDate()) {
+                              nextDate = new Date(current.getFullYear(), current.getMonth() + 1, 1)
                             } else {
-                              bgColor = green
+                              nextDate.setMonth(current.getMonth() + 1)
                             }
-                          } else {
-                            bgColor = red
+                            setCalendarDate(nextDate)
+                          }}
+                  >&gt;</Button>
+                </Col>
+              </Row>}
+              {activeScreen == 'about' && <Row>
+                <Col></Col>
+                <Col xs={8} className="text-center">About</Col>
+                <Col className="text-end"></Col>
+              </Row>}
+            </Container>
+          </div>
+          <div style={{overflow: "scroll", height: "100%", padding: '12px 0'}}>
+            {activeScreen == 'exercises' && <>
+              <ExercisesListTips exercises={exercises} setExercises={setExercises}/>
+
+              {exercises.map((exercise, i) => <Container
+                className="exerciseListItem" key={i}
+              >
+                <Row className="align-items-center" style={{opacity: exercise.isEnabled ? 1 : 0.6}}>
+                  <Col xs="1" className="h-100">
+                    <input type={"checkbox"} checked={exercise.isEnabled} onChange={(e) => {
+                      let newExercises = [...exercises]
+                      newExercises[i].isEnabled = e.target.checked
+                      setExercises(newExercises)
+                    }}/>
+                  </Col>
+                  <Col xs="11" onClick={(e) => {
+                    console.log("exerciseListItem.click", i, exercise.name)
+                    setViewExerciseModalObj(exercise)
+                  }}>
+                    {exercise.name}
+                    <div className="muscleGroups">
+                      {exercise.primary_muscle_groups.map((m, i) => <span className="primary" key={m}>{m}</span>)}
+                      {exercise.secondary_muscle_groups.map((m, i) => <span className="secondary" key={m}>{m}</span>)}
+                    </div>
+                  </Col>
+                </Row>
+
+              </Container>)}
+            </>}
+            {activeScreen == 'schedule' && <EditTrainingSchedule
+              numberOfTrainingsPerWeek={storedState.numberOfTrainingsPerWeek}
+              setNumberOfTrainingsPerWeek={setNumberOfTrainingsPerWeek}
+              suggestedTrainingDayNames={storedState.suggestedTrainingDayNames}
+              trainingDays={storedState.trainingDays}
+              onTrainingDayMarkerChange={onTrainingDayMarkerChange}
+              suggestedTrainingExercises={storedState.suggestedTrainingExercises}
+              setViewExerciseModalObj={setViewExerciseModalObj}
+              exercisesByNames={exercisesByNames}
+            />}
+            {activeScreen == 'trainings' && <>
+              <Container>
+                <table className={'trainingsTable'}>
+                  <thead>
+                  <tr>
+                    {WEEK_DAY_NAMES.map((day, i) => <th key={i}>{day[0]}</th>)}
+                  </tr>
+                  </thead>
+                  <tbody>
+                  {(() => {
+                    let rows = []
+                    for (let week_i = 0; week_i < calendarWeeksNum; week_i++) {
+                      let cells = []
+                      for (let i = 0; i < 7; i++) {
+                        let day = new Date(calendarFirstDay.getTime() + (week_i * 7 + i) * 1000 * 86400)
+                        cells.push(<td key={i} className={
+                          (
+                            (day.getMonth() > calendarDate.getMonth() || day.getFullYear() > calendarDate.getFullYear()) ? ' next' :
+                              (day.getFullYear() < calendarDate.getFullYear() || day.getMonth() < calendarDate.getMonth()) ? ' prev' : ''
+                          )
+                          + (day.getDate() == calendarDate.getDate() && day.getMonth() == calendarDate.getMonth() ? ' selected' : '')
+                          + (day.getDate() == new Date().getDate() ? ' today' : '')
+                          + (
+                            (day >= new Date() && (WEEK_DAY_NAMES[i] in storedState.trainingDays || storedState.suggestedTrainingDayNames.indexOf(WEEK_DAY_NAMES[i]) != -1))
+                            || (`${day.getFullYear()}-${day.getMonth() + 1}-${day.getDate()}` in storedState.logs)
+                              ? ' trainingDay' : '')
+                        }
+                                       onClick={() => {
+                                         setCalendarDate(day)
+                                       }}
+                        >
+                          <div>{day.getDate()}</div>
+                        </td>)
+                      }
+                      rows.push(<tr key={week_i}>{cells}</tr>)
+                    }
+                    return rows
+                  })()}
+                  </tbody>
+                </table>
+              </Container>
+
+              {calendarExercises.map((exercise: Exercise, i) => <Container
+                className="exerciseListItem" key={i}
+              >
+                <Row>
+                  <Col>{exercise.name}</Col>
+                  <Col className="text-end">
+                    <Button size="sm" variant="link" style={{position: 'relative', top: '-2px'}}
+                            onClick={(e) => setViewExerciseModalObj(exercise)}>info</Button>
+                  </Col>
+                </Row>
+                <div className="muscleGroups">
+                  {exercise.primary_muscle_groups.map((m, i) => <span className="primary" key={m}>{m}</span>)}
+                  {exercise.secondary_muscle_groups.map((m, i) => <span className="secondary" key={m}>{m}</span>)}
+                </div>
+                <br/>
+                <Row>
+                  {(() => {
+                      let dayLog = storedState.logs[calendarDateString] || {}
+                      let savedRecs = dayLog[exercise.name] || []
+                      let recs = [...savedRecs]
+                      let maxRecs = Math.max(5, recs.length)
+                      for (let i = recs.length; i < maxRecs; i++) {
+                        recs.push(null)
+                      }
+                      let cells = []
+                      for (let i = 0; i < maxRecs; i++) {
+                        let rec: TrainingLogRecord | null = recs[i]
+                        let isPredicted = false
+                        if (rec == null && (i == 0 || recs[i - 1] != null)) {
+                          isPredicted = true
+                        }
+                        let bgColor = undefined
+                        if (rec != null) {
+                          let red = 'rgba(255,0,0,0.2)'
+                          let yellow = 'rgba(255,166,0,0.2)'
+                          let green = 'rgba(0,255,0,0.2)'
+                          if (rec.feel == 'bad' || rec.feel == 'exhausted') {
+                            bgColor = yellow
+                          }
+                          if (rec.harm.length > 0) {
+                            if (rec.harm.indexOf('burn') > -1) {
+                              if (rec.harm.length > 1) {
+                                bgColor = red
+                              } else {
+                                bgColor = green
+                              }
+                            } else {
+                              bgColor = red
+                            }
+                          }
+                          if (!bgColor && !rec.able_to_do_1_more_time) {
+                            bgColor = green
                           }
                         }
-                        if (!bgColor && !rec.able_to_do_1_more_time) {
-                          bgColor = green
-                        }
+                        cells.push(<Col key={i} xs="2" className="text-center" style={{padding: "3px"}}
+                                        onClick={(rec || isPredicted) ? () => setEditingTrainingLog({
+                                          log: rec || {},
+                                          exerciseName: exercise.name,
+                                          idx: i,
+                                          dateString: calendarDateString,
+                                        }) : (() => {
+                                        })}
+                        >
+                          <div style={{backgroundColor: bgColor, borderRadius: "4px"}}
+                               className={isPredicted ? 'text-muted' : ''}>
+                            {(rec || isPredicted) && <>
+                              {rec !== null ? rec.repeats : ['20', '20', '15', '12', '8'][i]}
+                              <span style={{display: 'block', lineHeight: '0.5em', fontSize: '0.6em'}}>x</span>
+                              {rec !== null ? rec.weight : ['-', '1', '3', '5', '7'][i]}
+                              {(rec !== null || i > 0) && <span style={{fontSize: '0.8em'}}>kg</span>}
+                            </>}
+                          </div>
+                        </Col>)
                       }
-                      cells.push(<Col key={i} xs="2" className="text-center" style={{padding: "3px"}}
-                                      onClick={(rec || isPredicted) ? () => setEditingTrainingLog({
-                                        log: rec || {},
-                                        exerciseName: exercise.name,
-                                        idx: i,
-                                        dateString: calendarDateString,
-                                      }) : (() => {
-                                      })}
-                      >
-                        <div style={{backgroundColor: bgColor, borderRadius: "4px"}}
-                             className={isPredicted ? 'text-muted' : ''}>
-                          {(rec || isPredicted) && <>
-                            {rec !== null ? rec.repeats : ['20','20','15','12','8'][i]}
-                            <span style={{display: 'block', lineHeight: '0.5em', fontSize: '0.6em'}}>x</span>
-                            {rec !== null ? rec.weight : ['-','1','3','5','7'][i]}
-                            {(rec !== null || i > 0) &&<span style={{fontSize: '0.8em'}}>kg</span>}
-                          </>}
-                        </div>
+                      cells.push(<Col xs="2" className='text-end' style={{position: 'relative'}}>
+                        <Button className='h-100'
+                                disabled={savedRecs.length == maxRecs}
+                                onClick={() => setEditingTrainingLog({
+                                  log: {} as Partial<TrainingLogRecord>,
+                                  exerciseName: exercise.name,
+                                  idx: null,
+                                  dateString: calendarDateString,
+                                })}>+</Button>
                       </Col>)
+                      return cells
                     }
-                    cells.push(<Col xs="2" className='text-end' style={{position: 'relative'}}>
-                      <Button className='h-100'
-                              disabled={savedRecs.length == maxRecs}
-                              onClick={() => setEditingTrainingLog({
-                                log: {} as Partial<TrainingLogRecord>,
-                                exerciseName: exercise.name,
-                                idx: null,
-                                dateString: calendarDateString,
-                              })}>+</Button>
-                    </Col>)
-                    return cells
-                  }
-                )()}
-              </Row>
-            </Container>)}
-          </>}
-          {activeScreen == 'about' && <Container>
-            <div>logo</div>
-            <div>*protorype</div>
-            In case of any questions, suggestions or issues, please contact me at:
-            <a href="mailto:antony.pererva+gymapp@gmail.com">antony.pererva@gmail.com</a><br/>
-            {/* todo: discord */}
-          </Container>}
+                  )()}
+                </Row>
+              </Container>)}
+            </>}
+            {activeScreen == 'about' && <Container>
+              <div>logo</div>
+              <div>*protorype</div>
+              In case of any questions, suggestions or issues, please contact me at:
+              <a href="mailto:antony.pererva+gymapp@gmail.com">antony.pererva@gmail.com</a><br/>
+              {/* todo: discord */}
+            </Container>}
+          </div>
+          <div style={{
+            background: "white",
+            lineHeight: '48px',
+            boxShadow: "0 0px 10px rgba(0,0,0,0.3)",
+            position: 'fixed',
+            width: '100%',
+            bottom: 0,
+            height: '48px'
+          }}>
+            <Container className={"d-flex h-100 justify-content-around align-items-center"}>
+              <Button size="sm" variant={activeScreen == 'exercises' ? "primary" : "outline-primary"}
+                      onClick={(e) => setActiveScreen('exercises')}>Exercises</Button>
+              <Button size="sm" variant={activeScreen == 'schedule' ? "primary" : "outline-primary"}
+                      onClick={(e) => setActiveScreen('schedule')}>Schedule</Button>
+              <Button size="sm" variant={activeScreen == 'trainings' ? "primary" : "outline-primary"}
+                      onClick={(e) => setActiveScreen('trainings')}>Trainings</Button>
+              <Button size="sm" variant={activeScreen == 'about' ? "primary" : "outline-primary"}
+                      onClick={(e) => setActiveScreen('about')}>i</Button>
+            </Container>
+          </div>
         </div>
-        <div style={{
-          background: "white",
-          lineHeight: '48px',
-          boxShadow: "0 0px 10px rgba(0,0,0,0.3)",
-          position: 'fixed',
-          width: '100%',
-          bottom: 0,
-          height: '48px'
-        }}>
-          <Container className={"d-flex h-100 justify-content-around align-items-center"}>
-            <Button size="sm" variant={activeScreen == 'exercises' ? "primary" : "outline-primary"}
-                    onClick={(e) => setActiveScreen('exercises')}>Exercises</Button>
-            <Button size="sm" variant={activeScreen == 'schedule' ? "primary" : "outline-primary"}
-                    onClick={(e) => setActiveScreen('schedule')}>Schedule</Button>
-            <Button size="sm" variant={activeScreen == 'trainings' ? "primary" : "outline-primary"}
-                    onClick={(e) => setActiveScreen('trainings')}>Trainings</Button>
-            <Button size="sm" variant={activeScreen == 'about' ? "primary" : "outline-primary"}
-                    onClick={(e) => setActiveScreen('about')}>i</Button>
-          </Container>
-        </div>
-      </div>
 
-      <AddExercisesModal show={addExercisesModalShow}
-                         setShow={setAddExercisesModalShow}
-                         onSave={(exs) => setExercises((prev) => (
-                           [...prev, ...exs.map((e) => ({...e, isEnabled: true}))]
-                         ))}
-                         uncheckExerciseNamesLC={exercises.map((e) => e.name.toLowerCase())}
-      />
-      <ViewExercisesModal show={viewExerciseModalObj != null}
-        // @ts-ignore
-                          exercise={viewExerciseModalObj}
-                          setShow={(show) => {
-                            let newObj = show ? viewExerciseModalObj : null
-                            console.log('app.ViewExercisesModal.setShow', show, viewExerciseModalObj, newObj)
-                            setViewExerciseModalObj(newObj)
-                          }}
-      />
+        <AddExercisesModal show={addExercisesModalShow}
+                           setShow={setAddExercisesModalShow}
+                           onSave={(exs) => setExercises((prev) => (
+                             [...prev, ...exs.map((e) => ({...e, isEnabled: true}))]
+                           ))}
+                           uncheckExerciseNamesLC={exercises.map((e) => e.name.toLowerCase())}
+        />
+        <ViewExercisesModal show={viewExerciseModalObj != null}
+          // @ts-ignore
+                            exercise={viewExerciseModalObj}
+                            setShow={(show) => {
+                              let newObj = show ? viewExerciseModalObj : null
+                              console.log('app.ViewExercisesModal.setShow', show, viewExerciseModalObj, newObj)
+                              setViewExerciseModalObj(newObj)
+                            }}
+        />
 
-      <TrainingLogRecordModal
-        value={editingTrainingLog != null ? editingTrainingLog.log : null}
-        title={editingTrainingLog?.exerciseName}
-        setValue={(rec) => {
-          if (rec == null) {
+        <TrainingLogRecordModal
+          value={editingTrainingLog != null ? editingTrainingLog.log : null}
+          title={editingTrainingLog?.exerciseName}
+          setValue={(rec) => {
+            if (rec == null) {
+              setEditingTrainingLog(null)
+            } else {
+              // @ts-ignore
+              setEditingTrainingLog({...editingTrainingLog, log: rec})
+            }
+          }}
+          onSave={(rec) => {
+            console.log('on save', rec)
+            if (editingTrainingLog) {
+              crudLog(rec, editingTrainingLog.exerciseName, editingTrainingLog.dateString, editingTrainingLog.idx)
+            }
             setEditingTrainingLog(null)
-          } else {
-            // @ts-ignore
-            setEditingTrainingLog({...editingTrainingLog, log: rec})
-          }
-        }}
-        onSave={(rec) => {
-          console.log('on save', rec)
-          if (editingTrainingLog) {
-            crudLog(rec, editingTrainingLog.exerciseName, editingTrainingLog.dateString, editingTrainingLog.idx)
-          }
-          setEditingTrainingLog(null)
-        }}
-      />
+          }}
+        />
+      </>}
+      {showTrainingDoneModal && <Modal show={showTrainingDoneModal} onHide={() =>
+          setShowTrainingDoneModal(false)}
+               fullscreen={true}
+               backdrop="static"
+               keyboard={false}
+               centered
+               className={"training-done-modal"}
+        >
+          <Modal.Header closeButton style={{
+            border: 'unset',
+          }}>
+            <Modal.Title></Modal.Title>
+          </Modal.Header>
+          <Modal.Body style={{
+            position: 'relative',
+          }}>
+            <div className='text-center w-100 h-75' style={{position: 'relative'}}>
+              <div style={{
+                fontSize: '3em',
+                paddingBottom: '32px',
+                color: 'white',
+              }}>
+                Great job!
+              </div>
+              <img src={logoTrainingDone} style={{
+                maxWidth: '100%',
+                width: 'auto',
+                height: 'auto',
+                maxHeight: '100%',
+              }}/>
+            </div>
+            <div className='w-100 text-center' style={{
+              'position': 'absolute',
+              bottom: '16px',
+              left: 0,
+              padding: '16px',
+            }}>
+              <Button className='w-50' onClick={() => setShowTrainingDoneModal(false)}>
+                Nice</Button>
+            </div>
+
+          </Modal.Body>
+        </Modal>}
     </>
   );
 }
