@@ -304,6 +304,7 @@ function App() {
   const crudLog = (log: TrainingLogRecord | null, exerciseName: string, dateString: string, index: number | null) => {
     let allLogs = storedState.logs[dateString] || {}
     let dayLogs = allLogs[exerciseName] || []
+    let oldLogsSize = dayLogs.length
     if (index != null) {
       if (index >= dayLogs.length) {
         for (let i = dayLogs.length; i < index; i++) {
@@ -318,6 +319,9 @@ function App() {
       ...p,
       logs: {...p.logs, [dateString]: {...allLogs, [exerciseName]: dayLogs}}
     }))
+    if (dayLogs.length == 5 && oldLogsSize < 5) {
+      setShowTrainingDoneModal(true)
+    }
   }
 
 
@@ -549,7 +553,7 @@ function App() {
               </Row>}
               {activeScreen == 'about' && <Row>
                 <Col></Col>
-                <Col xs={8} className="text-center">About</Col>
+                <Col xs={8} className="text-center"></Col>
                 <Col className="text-end"></Col>
               </Row>}
             </Container>
@@ -725,12 +729,38 @@ function App() {
                 </Row>
               </Container>)}
             </>}
-            {activeScreen == 'about' && <Container>
-              <div>logo</div>
-              <div>*prototype</div>
-              In case of any questions, suggestions or issues, please contact me at:
+            {activeScreen == 'about' && <Container  style={{
+            position: 'relative',
+          }}>
+            <div className='text-center w-100 h-75' style={{position: 'relative'}}>
+              <div style={{
+                fontSize: '3em',
+              }}>
+                Avocado
+              </div>
+              <div className="text-center text-muted">
+                your pocket trainer
+              </div>
+              <img src={logoMain} style={{
+                maxWidth: '100%',
+                width: 'auto',
+                height: 'auto',
+                maxHeight: '100%',
+              }}/>
+            </div>
+            <div className='w-100 text-center' style={{
+              'position': 'absolute',
+              bottom: '0px',
+              left: 0,
+              padding: '16px',
+              backgroundColor: 'rgba(255,255,255,0.7)',
+              borderRadius: '8px',
+            }}>
+              In case of any questions, suggestions or issues, please contact me at:<br/>
               <a href="mailto:antony.pererva+gymapp@gmail.com">antony.pererva@gmail.com</a><br/>
               {/* todo: discord */}
+            </div>
+
             </Container>}
           </div>
           <div style={{

@@ -51,7 +51,7 @@ export type TrainingLogRecordModalProps = {
   onSave(value: TrainingLogRecord): void
 }
 
-const MAX_REC_LENGTH_MS = 500
+const MAX_REC_LENGTH_MS = 30000
 
 const createMicRecorder = (onRecorded: ({
                                           micRec,
@@ -109,6 +109,7 @@ export function TrainingLogRecordModal({title, value, setValue, onSave}: Trainin
   const [showInfoModal, setShowInfoModal] = useState<'harm' | 'feel' | null>(null);
   const show = value != null;
   const showMainModal = show && showInfoModal == null;
+  const [isProcessingRecord, setIsProcessingRecord] = useState(false);
 
   const handleMainClose = () => {
     setValue(null);
@@ -133,14 +134,9 @@ export function TrainingLogRecordModal({title, value, setValue, onSave}: Trainin
         let fileName = `rec_${Date.now()}.${ext}`;
         let file = new File([micRec], fileName);
         formData.append('file', file, fileName);
-        formData.append('rec_key', 'random');
-        // ' I left it 20 kilos back hearts a lot. I had no better than 10 times.'
-        // formData.append('rec_key', 'hard_back_pain');
-        // 20 times, 5 kilos, easy
-        // formData.append('rec_key', 'quite_easy');
-        // ' 15 times 8 kilos was not easy but really good.'
-        // formData.append('rec_key', 'energy');
+        formData.append('rec_key', fileName);
 
+        setIsProcessingRecord(true);
         setActiveRecorder(null);
 
         return axios.post(`/api/upload_and_parse_training_log`,
@@ -153,6 +149,7 @@ export function TrainingLogRecordModal({title, value, setValue, onSave}: Trainin
           console.log('data', response.data)
           if (response.statusText == 'OK' && response.data.succeed_to_parse) {
             let log = response.data.training_log
+            setIsProcessingRecord(false)
             setValue({
               repeats: log.repeats,
               weight: log.weight,
@@ -161,7 +158,13 @@ export function TrainingLogRecordModal({title, value, setValue, onSave}: Trainin
               harm: log.harm,
               tips: log.tips,
             })
+          } else {
+            setIsProcessingRecord(false)
+            alert('failed to parse audio, use manual input')
           }
+        }).catch((err) => {
+          setIsProcessingRecord(false)
+          alert('failed to parse audio, use manual input')
         })
       }).then((mediaRecorder) => {
         setActiveRecorder(mediaRecorder);
@@ -312,26 +315,31 @@ export function TrainingLogRecordModal({title, value, setValue, onSave}: Trainin
       </Modal.Body>
       <Modal.Footer className='flex-grow-1 w-100'>
         <Row className="w-100">
-          <Col>
-            <Button onClick={toggleRecording}>{!activeRecorder ? 'Record' : 'Stop'}</Button>
-            {/* https://medium.com/@bryanjenningz/how-to-record-and-play-audio-in-javascript-faa1b2b3e49b */}
-          </Col>
-          <Col className='text-end'>
-            <Button disabled={!value || !value.feel || !value.repeats || !value.weight}
-                    onClick={() => {
-                      if (value != null) {
-                        if (value.harm == undefined) {
-                          value.harm = []
-                        }
-                        if (value.able_to_do_1_more_time === undefined) {
-                          value.able_to_do_1_more_time = false
-                        }
-                        // @ts-ignore
-                        onSave(value)
-                      }
-                    }}
-            >Save</Button>
-          </Col>
+          {isProcessingRecord && <Button variant="primary" disabled>Processing</Button>}
+          {!isProcessingRecord && <>
+            <Col>
+              <Button disabled={isProcessingRecord}
+                      onClick={toggleRecording}>{!activeRecorder ? 'Record' : 'Stop'}</Button>
+              {/* https://medium.com/@bryanjenningz/how-to-record-and-play-audio-in-javascript-faa1b2b3e49b */}
+            </Col>
+            <Col className='text-end'>
+              <Button
+                disabled={!value || !value.feel || !value.repeats || !value.weight || !!activeRecorder || isProcessingRecord}
+                onClick={() => {
+                  if (value != null) {
+                    if (value.harm == undefined) {
+                      value.harm = []
+                    }
+                    if (value.able_to_do_1_more_time === undefined) {
+                      value.able_to_do_1_more_time = false
+                    }
+                    // @ts-ignore
+                    onSave(value)
+                  }
+                }}
+              >Save</Button>
+            </Col>
+          </>}
         </Row>
 
       </Modal.Footer>

@@ -37,6 +37,7 @@ export function AddExercisesModal({uncheckExerciseNamesLC, show, setShow, onSave
   // https://www.youtube.com/watch?v=eMjyvIQbn9M
   // https://www.youtube.com/watch?v=R6gZoAzAhCg - very bad one, 45 min, need logic to handle large transcription, but still doable
   // https://www.youtube.com/watch?v=IODxDxX7oi4
+  // https://www.youtube.com/watch?v=R6gZoAzAhCg
   const handleClose = () => {
     _setShow(false);
     setExercises([]);
@@ -45,6 +46,7 @@ export function AddExercisesModal({uncheckExerciseNamesLC, show, setShow, onSave
   const handleSave = () => {
     handleClose();
     setExercises([]);
+    setVideoUrl('');
     if (onSave) {
       onSave(exercises.filter(e => e.isEnabled));
     }
@@ -116,8 +118,7 @@ export function AddExercisesModal({uncheckExerciseNamesLC, show, setShow, onSave
               autoFocus
             />
           </Form.Group>
-          {isLoading && <p>Loading...</p>}
-          {!isLoading && <Button type="submit" className="w-100">Process</Button>}
+          <Button type="submit" disabled={isLoading || !videoUrl} className="w-100">Process</Button>
         </Form>
       </Container>
       <hr/>

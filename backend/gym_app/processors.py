@@ -228,12 +228,14 @@ def process_video_to_exercises(video: Video) -> TextToExercisesResult:
                         if "moves_text_locations" not in exercise_raw:
                             raise ValueError("moves_text_locations not found")
                         if len(exercise_raw["moves_text_locations"]) != len(steps_raw):
-                            raise ValueError("moves_text_locations length mismatch")
-                        for i in range(len(steps_raw)):
-                            steps.append({
-                                'text': steps_raw[i],
-                                'text_location': int(exercise_raw['moves_text_locations'][i]),
-                            })
+                            steps = []
+                            # raise ValueError("moves_text_locations length mismatch")
+                        else:
+                            for i in range(len(steps_raw)):
+                                steps.append({
+                                    'text': steps_raw[i],
+                                    'text_location': int(exercise_raw['moves_text_locations'][i]),
+                                })
                     else:
                         if len(steps_raw[0]) != 2:
                             raise ValueError("steps_raw do not contain exactly 2 keys")
@@ -301,7 +303,7 @@ def process_video_to_exercises(video: Video) -> TextToExercisesResult:
 
 
 def parse_gpt_training_log(text_to_parse: str) -> dict:
-    log_raw = extract_json(text_to_parse, try_list=False)
+    log_raw = extract_json(text_to_parse, as_list=False)
     log = {}
     log['repeats'] = int(log_raw['repeats'])
     log['weight'] = int(log_raw['weight'])
