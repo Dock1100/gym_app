@@ -1,9 +1,9 @@
 numpy==1.23.5
-torch==1.13.0
+torch
 git+https://github.com/openai/whisper.git
 pytube==12.1.0
 openai==0.25.0
 Django==4.1.4
 psycopg2==2.9.5
-demjson==2.24
+demjson==2.2.4
 python-dotenv==0.21.0

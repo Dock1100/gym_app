@@ -1,5 +1,6 @@
 # pull official base image
-FROM python:3.9.6-alpine
+#FROM python:3.9.6-alpine
+FROM python:3.8.12-slim-bullseye
 
 # set work directory
 WORKDIR /usr/src/app
@@ -8,7 +9,8 @@ WORKDIR /usr/src/app
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-RUN apk add python3-dev build-base linux-headers pcre-dev git
+RUN apt-get -y update
+RUN apt-get -y install build-essential git libpq-dev ffmpeg
 # install dependencies
 RUN pip install --upgrade pip
 COPY ./requirements.txt .
@@ -16,5 +18,6 @@ RUN pip install -r requirements.txt
 
 # copy project
 COPY . .
+RUN touch ./.env
 
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
