@@ -426,7 +426,7 @@ function App() {
               <Form className='text-center' onSubmit={(e) => {
                 e.preventDefault()
                 if (e.target) {
-                  let data: {[key: string]: string|boolean} = {}
+                  let data: { [key: string]: string | boolean } = {}
                   // @ts-ignore
                   let inputs: NodeListOf<HTMLInputElement> = e.target.querySelectorAll('input')
 
@@ -441,7 +441,7 @@ function App() {
                   setRegisterButtonIsLoading(true)
                   axios.post('/api/register', data).then((res) => {
                     setRegisterButtonIsLoading(false)
-                     // @ts-ignore
+                    // @ts-ignore
                     setStoredState((p) => ({...p, userEmail: data['email']}))
                   }).catch((err) => {
                     setRegisterButtonIsLoading(false)
@@ -729,37 +729,36 @@ function App() {
                 </Row>
               </Container>)}
             </>}
-            {activeScreen == 'about' && <Container  style={{
-            position: 'relative',
-          }}>
-            <div className='text-center w-100 h-75' style={{position: 'relative'}}>
-              <div style={{
-                fontSize: '3em',
-              }}>
-                Avocado
-              </div>
-              <div className="text-center text-muted">
-                your pocket trainer
-              </div>
-              <img src={logoMain} style={{
-                maxWidth: '100%',
-                width: 'auto',
-                height: 'auto',
-                maxHeight: '100%',
-              }}/>
-            </div>
-            <div className='w-100 text-center' style={{
-              'position': 'absolute',
-              bottom: '0px',
-              left: 0,
-              padding: '16px',
-              backgroundColor: 'rgba(255,255,255,0.7)',
-              borderRadius: '8px',
+            {activeScreen == 'about' && <Container style={{
+              position: 'relative',
             }}>
-              In case of any questions, suggestions or issues, please contact me at:<br/>
-              <a href="mailto:antony.pererva+gymapp@gmail.com">antony.pererva@gmail.com</a><br/>
-              {/* todo: discord */}
-            </div>
+              <div className='text-center w-100 h-75' style={{position: 'relative'}}>
+                <div style={{
+                  fontSize: '3em',
+                }}>
+                  Avocado
+                </div>
+                <div className="text-center text-muted">
+                  your pocket trainer
+                </div>
+                <img src={logoMain} style={{
+                  maxWidth: '100%',
+                  width: 'auto',
+                  maxHeight: '60vh',
+                }}/>
+              </div>
+              <div className='w-100 text-center' style={{
+                'position': 'absolute',
+                bottom: '0px',
+                left: 0,
+                padding: '16px',
+                backgroundColor: 'rgba(255,255,255,0.7)',
+                borderRadius: '8px',
+              }}>
+                In case of any questions, suggestions or issues, please contact me at:<br/>
+                <a href="mailto:antony.pererva+gymapp@gmail.com">antony.pererva@gmail.com</a><br/>
+                {/* todo: discord */}
+              </div>
 
             </Container>}
           </div>
