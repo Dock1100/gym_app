@@ -705,9 +705,9 @@ function App() {
                           <div style={{backgroundColor: bgColor, borderRadius: "4px"}}
                                className={isPredicted ? 'text-muted' : ''}>
                             {(rec || isPredicted) && <>
-                              {rec !== null ? rec.repeats : ['20', '20', '15', '12', '8'][i]}
+                              {rec !== null ? rec.repeats : ['20', '10', '10', '8', '8'][i]}
                               <span style={{display: 'block', lineHeight: '0.5em', fontSize: '0.6em'}}>x</span>
-                              {rec !== null ? rec.weight : ['-', '1', '3', '5', '7'][i]}
+                              {rec !== null ? rec.weight : ['-', '10', '12', '14', '16'][i]}
                               {(rec !== null || i > 0) && <span style={{fontSize: '0.8em'}}>kg</span>}
                             </>}
                           </div>

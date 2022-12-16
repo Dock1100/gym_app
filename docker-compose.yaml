@@ -1,0 +1,46 @@
+version: '3.5'
+
+services:
+  frontapp:
+    container_name: frontapp
+    restart: unless-stopped
+    build:
+      context: ./frontend
+      target: production
+    #      - "3080:3080"
+
+  backapp:
+    container_name: backapp
+    restart: unless-stopped
+    build:
+      context: ./backend
+    #      - "8000:8000"
+    depends_on:
+      - postgres
+    volumes:
+      - ./data/back:/usr/src/app/data
+      - ./.env:/usr/src/app/.env
+
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: gym_app
+      POSTGRES_DB: gym_app_db
+      POSTGRES_PASSWORD: password
+    volumes:
+       - ./data/postgres:/var/lib/postgresql/data
+#    ports:
+#      - "5432:5432"
+    restart: unless-stopped
+
+  webserver:
+    image: nginx:mainline-alpine
+    container_name: webserver
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d
+    depends_on:
+      - frontapp
+      - backapp

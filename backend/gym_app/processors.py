@@ -305,8 +305,8 @@ def process_video_to_exercises(video: Video) -> TextToExercisesResult:
 def parse_gpt_training_log(text_to_parse: str) -> dict:
     log_raw = extract_json(text_to_parse, as_list=False)
     log = {}
-    log['repeats'] = int(log_raw['repeats'])
-    log['weight'] = int(log_raw['weight'])
+    log['repeats'] = int(log_raw['repeats']) if str(log_raw.get('repeats', '')).isdecimal() else 10
+    log['weight'] = int(log_raw['weight']) if str(log_raw.get('weight', '')).isdecimal() else 5
     log['able_to_do_more'] = log_raw['can_do_one_more_repeat']
     log['feel'] = log_raw['feel']  # "bad", "exhausted", "ok", "energetic"
     harm = set()  # "no_air", "dizzy", "joint", "burn"
