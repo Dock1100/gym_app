@@ -14,9 +14,8 @@ def parse_video_by_url(request):
     video_url = data.get('videoUrl')
     if not video_url:
         return HttpResponse('no video_url', status=400)
-    try:
-        video = Video.objects.get(url=video_url)
-    except Video.DoesNotExist:
+    video = Video.objects.filter(url=video_url).first()
+    if not video:
         video = Video(url=video_url)
         video.save()
     text_to_exercises = process_video_to_exercises(video)
@@ -58,11 +57,8 @@ def upload_and_parse_training_log(request):
             select * from {0} where key is not NULL order by random() limit 1
         '''.format(TrainingLog._meta.db_table)).iterator())
     else:
-        try:
-            rec = TrainingLog.objects.get(key=rec_key)
-            # rec.file = file
-            # rec.save()
-        except TrainingLog.DoesNotExist:
+        rec = TrainingLog.objects.filter(key=rec_key).first()
+        if not rec:
             rec = TrainingLog(key=rec_key)
             rec.file = file
             rec.save()
@@ -101,9 +97,8 @@ def register(request):
     if not email:
         return HttpResponse('no email', status=200)
 
-    try:
-        subscriber = Subscriber.objects.get(email=email)
-    except Subscriber.DoesNotExist:
+    subscriber = Subscriber.objects.filter(email=email).first()
+    if not subscriber:
         subscriber = Subscriber(email=email)
 
     subscriber.login_nums = (subscriber.login_nums or 0) + 1

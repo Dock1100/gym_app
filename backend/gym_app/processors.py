@@ -177,12 +177,11 @@ def process_video_to_exercises(video: Video) -> TextToExercisesResult:
         video.transcript_text = transcript['text']
         video.save()
 
-    try:
-        text_to_exercises = TextToExercisesResult.objects.get(
+    text_to_exercises = TextToExercisesResult.objects.filter(
             transcript_text=video.transcript_text,
             openapi_prompt_template=TEXT_TO_EXERCISES_PROMPT_TEMPLATE
-        )
-    except TextToExercisesResult.DoesNotExist:
+    ).first()
+    if not text_to_exercises:
         openapi_response = gpt3complete(TEXT_TO_EXERCISES_PROMPT_TEMPLATE, video.transcript_text)
         text_to_exercises = TextToExercisesResult(
             transcript_text=video.transcript_text,
@@ -358,12 +357,11 @@ def process_rec_to_training_log(rec: TrainingLog) -> TextToTrainingLog:
         rec.transcript_text = transcript['text']
         rec.save()
 
-    try:
-        text_to_training_log = TextToTrainingLog.objects.get(
+    text_to_training_log = TextToTrainingLog.objects.filter(
             transcript_text=rec.transcript_text,
             openapi_prompt_template=TEXT_TO_TRAINING_LOG_PROMPT_TEMPLATE
-        )
-    except TextToTrainingLog.DoesNotExist:
+    ).first()
+    if not text_to_training_log:
         openapi_response = gpt3complete(TEXT_TO_TRAINING_LOG_PROMPT_TEMPLATE, rec.transcript_text)
         text_to_training_log = TextToTrainingLog(
             transcript_text=rec.transcript_text,
