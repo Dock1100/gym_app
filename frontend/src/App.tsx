@@ -197,7 +197,7 @@ function suggestMissingExercises(trainingDays: TrainingDays, suggestedTrainingDa
 }
 
 function App() {
-  const [showTrainingDoneModal, setShowTrainingDoneModal] = useState<boolean>(true)
+  const [showTrainingDoneModal, setShowTrainingDoneModal] = useState<boolean>(false)
   const [storedState, setStoredState] = useState<StoredStateType>(() => {
       let savedState = localStorage.getItem('storedState')
       try {
@@ -227,6 +227,8 @@ function App() {
   )
 
   localStorage.setItem('storedState', JSON.stringify(storedState))
+
+  const [registerButtonIsLoading, setRegisterButtonIsLoading] = useState<boolean>(false)
 
   let [calendarDate, setCalendarDate] = useState<Date | null>(null)
 
@@ -376,7 +378,7 @@ function App() {
 
   return (
     <>
-      {storedState.userEmail &&
+      {!storedState.userEmail &&
         <Modal show={!storedState.userEmail} onHide={() =>
           setStoredState((p) => ({...p, userEmail: 'abc'}))}
                fullscreen={true}
@@ -419,25 +421,51 @@ function App() {
             }}>
               <Form className='text-center' onSubmit={(e) => {
                 e.preventDefault()
-                console.log("submit")
+                if (e.target) {
+                  let data: {[key: string]: string|boolean} = {}
+                  // @ts-ignore
+                  let inputs: NodeListOf<HTMLInputElement> = e.target.querySelectorAll('input')
+
+                  inputs.forEach((input: HTMLInputElement) => {
+                    if (input.type == 'checkbox') {
+                      data[input.name] = input.checked
+                    } else {
+                      data[input.name] = input.value
+                    }
+                  })
+                  console.log("submit", e)
+                  setRegisterButtonIsLoading(true)
+                  axios.post('/api/register', data).then((res) => {
+                    setRegisterButtonIsLoading(false)
+                     // @ts-ignore
+                    setStoredState((p) => ({...p, userEmail: data['email']}))
+                  }).catch((err) => {
+                    setRegisterButtonIsLoading(false)
+                    setStoredState((p) => ({...p, userEmail: 'Bad email'}))
+                  })
+                }
               }}>
                 <Form.Group controlId="formBasicEmail" style={{
                   paddingBottom: '8px',
                 }}>
-                    <Form.Control type="email" placeholder="Enter email" required />
+                  <Form.Control name='email' type="email" placeholder="Enter email" required/>
                 </Form.Group>
                 <div>
-                <Form.Check className='d-inline-block' type="checkbox" label='Track updates' id='abc'/>
+                  <Form.Check defaultChecked={true} name={'is_subscriber'} className='d-inline-block' type="checkbox"
+                              label='Track updates' id='abc'/>
                 </div>
-                <div style={{paddingTop:'8px'}}>
-                <Button type='submit'>Let's go</Button>
-                  </div>
+                <div style={{paddingTop: '8px'}}>
+                  <Button type='submit' disabled={registerButtonIsLoading}>
+                    {registerButtonIsLoading && 'loading'}
+                    {!registerButtonIsLoading && "Let's go"}
+                  </Button>
+                </div>
               </Form>
             </div>
 
           </Modal.Body>
         </Modal>}
-      {!storedState.userEmail && <>
+      {storedState.userEmail && <>
         <div style={{padding: '48px 0', height: "100%"}}>
           <div className='navigationHeader' style={{
             background: "white",
@@ -453,7 +481,7 @@ function App() {
                 <Col>
                   <Button variant="outline-primary"
                           onClick={(e) => {
-                            setExercises(exercises.map(ex => ({...ex, isEnabled: false})))
+                            setStoredState(DEFAULT_STORED_STATE)
                           }}
                           size="sm"
                   >Reset</Button>
@@ -699,7 +727,7 @@ function App() {
             </>}
             {activeScreen == 'about' && <Container>
               <div>logo</div>
-              <div>*protorype</div>
+              <div>*prototype</div>
               In case of any questions, suggestions or issues, please contact me at:
               <a href="mailto:antony.pererva+gymapp@gmail.com">antony.pererva@gmail.com</a><br/>
               {/* todo: discord */}
@@ -765,48 +793,48 @@ function App() {
         />
       </>}
       {showTrainingDoneModal && <Modal show={showTrainingDoneModal} onHide={() =>
-          setShowTrainingDoneModal(false)}
-               fullscreen={true}
-               backdrop="static"
-               keyboard={false}
-               centered
-               className={"training-done-modal"}
-        >
-          <Modal.Header closeButton style={{
-            border: 'unset',
-          }}>
-            <Modal.Title></Modal.Title>
-          </Modal.Header>
-          <Modal.Body style={{
-            position: 'relative',
-          }}>
-            <div className='text-center w-100 h-75' style={{position: 'relative'}}>
-              <div style={{
-                fontSize: '3em',
-                paddingBottom: '32px',
-                color: 'white',
-              }}>
-                Great job!
-              </div>
-              <img src={logoTrainingDone} style={{
-                maxWidth: '100%',
-                width: 'auto',
-                height: 'auto',
-                maxHeight: '100%',
-              }}/>
-            </div>
-            <div className='w-100 text-center' style={{
-              'position': 'absolute',
-              bottom: '16px',
-              left: 0,
-              padding: '16px',
+        setShowTrainingDoneModal(false)}
+                                       fullscreen={true}
+                                       backdrop="static"
+                                       keyboard={false}
+                                       centered
+                                       className={"training-done-modal"}
+      >
+        <Modal.Header closeButton style={{
+          border: 'unset',
+        }}>
+          <Modal.Title></Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={{
+          position: 'relative',
+        }}>
+          <div className='text-center w-100 h-75' style={{position: 'relative'}}>
+            <div style={{
+              fontSize: '3em',
+              paddingBottom: '32px',
+              color: 'white',
             }}>
-              <Button className='w-50' onClick={() => setShowTrainingDoneModal(false)}>
-                Nice</Button>
+              Great job!
             </div>
+            <img src={logoTrainingDone} style={{
+              maxWidth: '100%',
+              width: 'auto',
+              height: 'auto',
+              maxHeight: '100%',
+            }}/>
+          </div>
+          <div className='w-100 text-center' style={{
+            'position': 'absolute',
+            bottom: '16px',
+            left: 0,
+            padding: '16px',
+          }}>
+            <Button className='w-50' onClick={() => setShowTrainingDoneModal(false)}>
+              Nice</Button>
+          </div>
 
-          </Modal.Body>
-        </Modal>}
+        </Modal.Body>
+      </Modal>}
     </>
   );
 }

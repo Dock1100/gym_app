@@ -32,7 +32,7 @@ export function AddExercisesModal({uncheckExerciseNamesLC, show, setShow, onSave
 
   const [isLoading, setIsLoading] = useState(false);
   const [exercises, setExercises] = useState<WithIsEnabled<Exercise>[]>([]);
-  const [videoUrl, setVideoUrl] = useState<string>('https://www.youtube.com/watch?v=IODxDxX7oi4');
+  const [videoUrl, setVideoUrl] = useState<string>('');
   // const [videoUrl, setVideoUrl] = useState<string>('https://www.youtube.com/watch?v=eMjyvIQbn9M');
   // https://www.youtube.com/watch?v=eMjyvIQbn9M
   // https://www.youtube.com/watch?v=R6gZoAzAhCg - very bad one, 45 min, need logic to handle large transcription, but still doable
@@ -111,6 +111,7 @@ export function AddExercisesModal({uncheckExerciseNamesLC, show, setShow, onSave
             <Form.Control
               type="text"
               value={videoUrl}
+              placeholder={'Link with favourite exercises'}
               onChange={(e) => setVideoUrl(e.target.value)}
               autoFocus
             />

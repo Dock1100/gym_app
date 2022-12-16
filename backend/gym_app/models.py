@@ -39,6 +39,15 @@ class TextToTrainingLog(models.Model):
     training_log = models.JSONField(null=True)
 
 
+class Subscriber(models.Model):
+    email = models.CharField(max_length=512, unique=True, db_index=True, primary_key=True)
+    date_created = models.DateField(auto_now_add=True)
+    date_last_login = models.DateField(auto_now=True)
+    is_subscriber = models.BooleanField(default=False)
+    is_or_subscriber = models.BooleanField(default=False)
+    login_nums = models.IntegerField(default=0)
+
+
 # class Video:
 #     url = models.CharField(max_length=256, unique=True, db_index=True)
 #     name = models.CharField(max_length=256, unique=True, db_index=True)

@@ -1,10 +1,13 @@
 import json
+from datetime import datetime
+import logging
 
 from django.http import HttpResponse
 
-from gym_app.models import Video, TrainingLog
+from gym_app.models import Video, TrainingLog, Subscriber
 from gym_app.processors import process_video_to_exercises, process_rec_to_training_log
 
+logger = logging.getLogger(__name__)
 
 def parse_video_by_url(request):
     data = json.loads(request.body)
@@ -88,3 +91,24 @@ def reprocess_all_audio(request):
         })
 
     return HttpResponse(json.dumps(data, indent=True), content_type='application/json', status=200)
+
+
+def register(request):
+    logger.warning('register', request.body, exc_info=False)
+    data = json.loads(request.body)
+    email = data.get('email')
+    is_subscriber = data.get('is_subscriber', False)
+    if not email:
+        return HttpResponse('no email', status=200)
+
+    try:
+        subscriber = Subscriber.objects.get(email=email)
+    except Subscriber.DoesNotExist:
+        subscriber = Subscriber(email=email)
+
+    subscriber.login_nums = (subscriber.login_nums or 0) + 1
+    subscriber.date_last_login = datetime.now()
+    subscriber.is_subscriber = is_subscriber
+    subscriber.is_or_subscriber = subscriber.is_or_subscriber or is_subscriber
+    subscriber.save()
+    return HttpResponse('thanks', status=200)
