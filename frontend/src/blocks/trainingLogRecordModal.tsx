@@ -147,7 +147,7 @@ export function TrainingLogRecordModal({title, value, setValue, onSave}: Trainin
           }).then((response) => {
           console.log('response', response)
           console.log('data', response.data)
-          if (response.statusText == 'OK' && response.data.succeed_to_parse) {
+          if (response.data && response.data.succeed_to_parse) {
             let log = response.data.training_log
             setIsProcessingRecord(false)
             setValue({

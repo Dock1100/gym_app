@@ -78,7 +78,7 @@ export function AddExercisesModal({uncheckExerciseNamesLC, show, setShow, onSave
             .then(function (response) {
               console.log('response', response);
               setIsLoading(false);
-              if (response.statusText == 'OK' && response.data.succeed_to_parse) {
+              if (response.data && response.data.succeed_to_parse) {
                 console.log('exercises', response.data.exercises);
                 let exercises: WithIsEnabled<Exercise>[] = []
                 for (let exRaw of response.data.exercises) {

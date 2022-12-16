@@ -32,6 +32,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+CSRF_TRUSTED_ORIGINS = ['https://theavocado.app', 'https://www.theavocado.app']
 
 # Application definition
 
