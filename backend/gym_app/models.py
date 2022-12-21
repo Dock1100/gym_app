@@ -41,8 +41,8 @@ class TextToTrainingLog(models.Model):
 
 class Subscriber(models.Model):
     email = models.CharField(max_length=512, unique=True, db_index=True, primary_key=True)
-    date_created = models.DateField(auto_now_add=True)
-    date_last_login = models.DateField(auto_now=True)
+    date_created = models.DateTimeField(auto_now_add=True)
+    date_last_login = models.DateTimeField(auto_now=True)
     is_subscriber = models.BooleanField(default=False)
     is_or_subscriber = models.BooleanField(default=False)
     login_nums = models.IntegerField(default=0)
